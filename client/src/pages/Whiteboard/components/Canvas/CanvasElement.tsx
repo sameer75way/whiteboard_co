@@ -1,0 +1,327 @@
+import { Group, Rect, Circle, Text } from "react-konva";
+import { type KonvaEventObject } from "konva/lib/Node";
+import type Konva from "konva";
+
+import { useRef, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../../../store/index";
+
+import { db } from "../../../../services/offline/offlineDB";
+
+import {
+  updateElement,
+  selectElement
+} from "../../../../store/canvas/canvasSlice";
+
+import type { CanvasElement as Element } from "../../../../types/element.types";
+
+import { socket } from "../../../../services/socket/socketClient";
+
+interface Props {
+  element: Element;
+  boardId: string;
+  onEditText?: (elementId: string, currentText: string, pos: { x: number; y: number; width: number }) => void;
+}
+
+export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
+
+  const dispatch = useDispatch();
+  const userName = useSelector((state: RootState) => state.auth.user?.name) || "User";
+  const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group>(null);
+  const lastCursorEmitRef = useRef<number>(0);
+
+  const broadcastUpdate = useCallback(async (updated: Element) => {
+    dispatch(updateElement(updated));
+    if (navigator.onLine) {
+      socket.emit("element:update", {
+        boardId,
+        elementId: element._id,
+        payload: updated
+      });
+    } else {
+      await db.operations.add({
+        boardId: element.boardId || "",
+        elementId: element._id,
+        operation: "update",
+        payload: updated,
+        clientVersion: element.version
+      });
+    }
+  }, [boardId, element._id, element.boardId, element.version, dispatch]);
+
+  const handleSelect = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+    e.cancelBubble = true;
+    e.target.moveToTop();
+    dispatch(selectElement(element._id));
+  }, [dispatch, element._id]);
+
+  const handleDragStart = useCallback((e: KonvaEventObject<DragEvent>) => {
+    e.cancelBubble = true;
+    e.target.moveToTop();
+    dispatch(selectElement(element._id));
+  }, [dispatch, element._id]);
+
+  const handleDragEnd = useCallback((e: KonvaEventObject<DragEvent>) => {
+    const node = e.target;
+    broadcastUpdate({
+      ...element,
+      position: { x: node.x(), y: node.y() },
+      version: element.version + 1
+    });
+  }, [element, broadcastUpdate]);
+
+  const handleDragMove = useCallback((e: KonvaEventObject<DragEvent>) => {
+    const node = e.target;
+    if (navigator.onLine) {
+      const now = Date.now();
+      if (now - lastCursorEmitRef.current >= 32) {
+        lastCursorEmitRef.current = now;
+        
+        socket.emit("element:update", {
+          boardId,
+          elementId: element._id,
+          payload: {
+            ...element,
+            position: { x: node.x(), y: node.y() }
+          }
+        });
+
+        const stage = node.getStage();
+        if (stage) {
+          const pointer = stage.getPointerPosition();
+          if (pointer) {
+            socket.emit("cursor:move", {
+              boardId,
+              x: pointer.x,
+              y: pointer.y,
+              name: userName
+            });
+          }
+        }
+      }
+    }
+  }, [boardId, element, userName]);
+
+  const handleTransformEnd = useCallback(() => {
+    const node = shapeRef.current;
+    if (!node) return;
+
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+
+    node.scaleX(1);
+    node.scaleY(1);
+
+    let newWidth = element.dimensions.width;
+    let newHeight = element.dimensions.height;
+
+    if (element.type === "circle") {
+      const radius = element.dimensions.width / 2;
+      newWidth = Math.max(20, radius * 2 * scaleX);
+      newHeight = Math.max(20, radius * 2 * scaleY);
+    } else {
+      newWidth = Math.max(20, node.width() * scaleX);
+      newHeight = Math.max(20, node.height() * scaleY);
+    }
+
+    broadcastUpdate({
+      ...element,
+      position: { x: node.x(), y: node.y() },
+      dimensions: { width: newWidth, height: newHeight },
+      rotation: node.rotation(),
+      version: element.version + 1
+    });
+  }, [element, broadcastUpdate]);
+
+  const handleTransform = useCallback(() => {
+    const node = shapeRef.current;
+    if (!node || !navigator.onLine) return;
+
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+    
+    let newWidth = element.dimensions.width;
+    let newHeight = element.dimensions.height;
+
+    if (element.type === "circle") {
+      const radius = element.dimensions.width / 2;
+      newWidth = Math.max(20, radius * 2 * scaleX);
+      newHeight = Math.max(20, radius * 2 * scaleY);
+    } else {
+      newWidth = Math.max(20, node.width() * scaleX);
+      newHeight = Math.max(20, node.height() * scaleY);
+    }
+
+    const now = Date.now();
+    if (now - lastCursorEmitRef.current >= 32) {
+      lastCursorEmitRef.current = now;
+
+      socket.emit("element:update", {
+        boardId,
+        elementId: element._id,
+        payload: {
+          ...element,
+          position: { x: node.x(), y: node.y() },
+          dimensions: { width: newWidth, height: newHeight },
+          rotation: node.rotation()
+        }
+      });
+
+      const stage = node.getStage();
+      if (stage) {
+        const pointer = stage.getPointerPosition();
+        if (pointer) {
+          socket.emit("cursor:move", {
+            boardId,
+            x: pointer.x,
+            y: pointer.y,
+            name: userName
+          });
+        }
+      }
+    }
+  }, [boardId, element, userName]);
+
+  const handleDblClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+    if (!onEditText) return;
+    const stage = e.target.getStage();
+    if (!stage) return;
+
+    const textNode = e.target;
+    const absPos = textNode.getAbsolutePosition();
+    const stageBox = stage.container().getBoundingClientRect();
+
+    onEditText(element._id, element.content || "", {
+      x: stageBox.left + absPos.x * stage.scaleX() + stage.x(),
+      y: stageBox.top + absPos.y * stage.scaleY() + stage.y(),
+      width: (element.dimensions?.width || 200) * stage.scaleX()
+    });
+  }, [onEditText, element._id, element.content, element.dimensions?.width]);
+
+
+  if (element.type === "rectangle") {
+    return (
+      <Rect
+        ref={shapeRef as React.RefObject<Konva.Rect>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        width={element.dimensions.width}
+        height={element.dimensions.height}
+        rotation={element.rotation || 0}
+        fill={element.style.fill}
+        stroke={element.style.stroke}
+        strokeWidth={element.style.strokeWidth}
+        opacity={element.style.opacity}
+        draggable
+        onClick={handleSelect}
+        onTap={handleSelect}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+      />
+    );
+  }
+
+  if (element.type === "circle") {
+    return (
+      <Circle
+        ref={shapeRef as React.RefObject<Konva.Circle>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        radius={element.dimensions.width / 2}
+        rotation={element.rotation || 0}
+        fill={element.style.fill}
+        stroke={element.style.stroke}
+        strokeWidth={element.style.strokeWidth}
+        opacity={element.style.opacity}
+        draggable
+        onClick={handleSelect}
+        onTap={handleSelect}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+      />
+    );
+  }
+
+  if (element.type === "text") {
+    return (
+      <Text
+        ref={shapeRef as React.RefObject<Konva.Text>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        text={element.content || "Text"}
+        fontSize={20}
+        fill={element.style.fill}
+        width={element.dimensions.width}
+        rotation={element.rotation || 0}
+        draggable
+        onClick={handleSelect}
+        onTap={handleSelect}
+        onDblClick={handleDblClick}
+        onDblTap={handleDblClick}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+      />
+    );
+  }
+
+  if (element.type === "sticky") {
+    return (
+      <Group
+        ref={shapeRef as React.RefObject<Konva.Group>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        width={element.dimensions.width}
+        height={element.dimensions.height}
+        rotation={element.rotation || 0}
+        draggable
+        onClick={handleSelect}
+        onTap={handleSelect}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+      >
+        <Rect
+          width={element.dimensions.width}
+          height={element.dimensions.height}
+          fill={element.style.fill}
+          stroke={element.style.stroke}
+          strokeWidth={element.style.strokeWidth}
+          opacity={element.style.opacity}
+          cornerRadius={4}
+          shadowColor="rgba(0,0,0,0.15)"
+          shadowBlur={8}
+          shadowOffsetY={2}
+        />
+        <Text
+          x={10}
+          y={10}
+          width={element.dimensions.width - 20}
+          height={element.dimensions.height - 20}
+          text={element.content || "Sticky note"}
+          fontSize={16}
+          fill="#333"
+          lineHeight={1.4}
+          onDblClick={handleDblClick}
+          onDblTap={handleDblClick}
+        />
+      </Group>
+    );
+  }
+
+  return null;
+};
