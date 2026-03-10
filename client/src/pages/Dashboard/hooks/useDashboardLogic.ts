@@ -60,7 +60,7 @@ export const useDashboardLogic = () => {
       const board = res.data;
       navigate(`/board/${board._id}`);
       setCreateOpen(false);
-    } catch (error: unknown) {
+    } catch (error) {
       const message =
         error && typeof error === "object" && "data" in error
           ? (error as { data?: { message?: string } }).data?.message

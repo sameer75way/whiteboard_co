@@ -39,5 +39,4 @@ authRoutes.post(
 authRoutes.get("/me", authMiddleware, meController);
 authRoutes.post("/refresh", refreshController);
 
-// Admin only routes
 authRoutes.get("/admin/users", authMiddleware, requireRole(["Admin"]), getAllUsersController);

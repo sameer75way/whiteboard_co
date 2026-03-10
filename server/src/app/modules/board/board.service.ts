@@ -62,7 +62,7 @@ export const getBoardById = async (boardId: string, userId: string, userRole?: s
 
   if (userRole === "Admin") return board;
 
-  const isMember = (board.members as unknown as BoardMemberPopulated[]).some((member) => {
+  const isMember = (board.members as BoardMemberPopulated[]).some((member) => {
     const memberId = member.user._id ? member.user._id.toString() : member.user.toString();
     return memberId === userId && member.status === "Accepted";
   });
@@ -131,7 +131,7 @@ export const getPendingJoinRequests = async (ownerId: string) => {
   const requests: JoinRequest[] = [];
 
   boards.forEach((board) => {
-    (board.members as unknown as BoardMemberPopulated[]).forEach((member) => {
+    (board.members as BoardMemberPopulated[]).forEach((member) => {
       if (member.status === "Pending" && member.user) {
         requests.push({
           boardId: board._id.toString(),

@@ -54,7 +54,7 @@ const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
         
         <ErrorDetailsBox>
           <ErrorText variant="caption">
-            {(error as Error)?.message || 'An unknown error occurred'}
+            {(error as Error)?.message || 'An unexpected error occurred'}
           </ErrorText>
         </ErrorDetailsBox>
 

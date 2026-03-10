@@ -28,8 +28,9 @@ app.get("/health", (req, res) => {
   res.json({ message: "API running" });
 });
 
+import { apiLimiter } from "./app/common/middlewares/rateLimiter.middleware";
 
-app.use("/api", routes);
+app.use("/api", apiLimiter, routes);
 
 
 app.use(errorHandler);

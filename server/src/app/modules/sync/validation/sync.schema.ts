@@ -3,7 +3,7 @@ import { z } from "zod";
 export const operationSchema = z.object({
   elementId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
-  payload: z.record(z.string(), z.unknown()).optional(),
+  payload: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null(), z.object({}).passthrough(), z.array(z.any())])).optional(),
   clientVersion: z.number()
 });
 

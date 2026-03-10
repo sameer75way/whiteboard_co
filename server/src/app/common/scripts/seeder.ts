@@ -20,7 +20,7 @@ export const seedAdmin = async () => {
     } else {
       console.log("Superadmin already exists");
     }
-  } catch (error: unknown) {
+  } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === 11000) {
       console.log("Superadmin already exists (handled node concurrency)");
     } else {

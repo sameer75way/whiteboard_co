@@ -78,7 +78,7 @@ boardRoutes.delete(
   removeMemberController
 );
 
-// Admin only: view all boards
+
 boardRoutes.get(
   "/admin/all",
   authMiddleware,

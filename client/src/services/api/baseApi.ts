@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from "@reduxjs/toolkit/query";
+
 import type { RootState } from "../../store/index";
 import { setAuth, logout } from "../../store/auth/authSlice";
 import type { User } from "../../store/auth/authSlice";
@@ -18,7 +18,7 @@ const rawBaseQuery = fetchBaseQuery({
   }
 });
 
-const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+const baseQueryWithReauth: typeof rawBaseQuery = async (
   args,
   api,
   extraOptions
