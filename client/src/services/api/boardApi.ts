@@ -23,7 +23,8 @@ export const boardApi = baseApi.injectEndpoints({
     }),
 
     getBoard: builder.query({
-      query: (id: string) => `/boards/${id}`
+      query: (id: string) => `/boards/${id}`,
+      providesTags: ['Board']
     }),
 
     joinBoard: builder.mutation({
@@ -48,7 +49,8 @@ export const boardApi = baseApi.injectEndpoints({
         url: `/boards/${boardId}/role`,
         method: "PUT",
         body: { userId, role }
-      })
+      }),
+      invalidatesTags: ['Board']
     }),
 
     removeMember: builder.mutation({

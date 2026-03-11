@@ -23,13 +23,9 @@ export const createBoardController = catchAsync(async (
   req: Request,
   res: Response
 ) => {
-
   const userId = req.user?.id;
-
   const { name } = req.body;
-
   const board = await createBoard(userId!, name);
-
   return successResponse(res, "Board created", board);
 });
 
@@ -37,11 +33,8 @@ export const getBoardsController = catchAsync(async (
   req: Request,
   res: Response
 ) => {
-
   const userId = req.user?.id;
-
   const boards = await getUserBoards(userId!);
-
   return successResponse(res, "Boards fetched", boards);
 });
 
@@ -49,13 +42,10 @@ export const getBoardController = catchAsync(async (
   req: Request,
   res: Response
 ) => {
-
   const userId = req.user?.id;
   const userRole = req.user?.role;
   const { id } = req.params;
-
   const board = await getBoardById(id as string, userId!, userRole);
-
   return successResponse(res, "Board fetched", board);
 });
 
@@ -63,13 +53,13 @@ export const deleteBoardController = catchAsync(async (
   req: Request,
   res: Response
 ) => {
-
   const userId = req.user?.id;
   const userRole = req.user?.role;
   const { id } = req.params;
 
   await deleteBoard(id as string, userId!, userRole);
 
+  // Notify everyone in the board room in real-time
   const io = getIo();
   io.to(id as string).emit("board:deleted", { boardId: id });
 
@@ -88,12 +78,9 @@ export const joinBoardController = catchAsync(async (
   req: Request,
   res: Response
 ) => {
-
   const userId = req.user?.id;
   const { shareCode } = req.body;
-
   const board = await joinBoardByShareCode(shareCode?.trim(), userId!);
-
   return successResponse(res, "Joined board", board);
 });
 
@@ -107,6 +94,12 @@ export const updateRoleController = catchAsync(async (
 
   const board = await updateMemberRole(id as string, ownerId!, userId, role);
 
+  const io = getIo();
+  // Notify everyone in the board room — their toolbar/role UI will update
+  io.to(id as string).emit("board:role_updated", { boardId: id, userId, role });
+  // Also push directly to the affected user's personal room (they may not be on the board page)
+  io.to(`user:${userId}`).emit("board:role_updated", { boardId: id, userId, role });
+
   return successResponse(res, "Role updated", board);
 });
 
@@ -118,9 +111,7 @@ export const getJoinRequestsController = catchAsync(async (
   if (!userId) {
     throw new AppError("Unauthorized", 401);
   }
-
   const requests = await getPendingJoinRequests(userId);
-
   return successResponse(res, "Retrieved join requests successfully", requests);
 });
 
@@ -134,6 +125,15 @@ export const resolveJoinRequestController = catchAsync(async (
 
   const board = await resolveJoinRequest(id as string, ownerId!, userId, action, role);
 
+  const io = getIo();
+  // Push the resolution directly to the waiting user
+  io.to(`user:${userId}`).emit("board:join_resolved", {
+    boardId: id,
+    status: action === "accept" ? "Accepted" : "Rejected"
+  });
+  // Notify all board members that the member list changed
+  io.to(id as string).emit("board:members_updated", { boardId: id });
+
   return successResponse(res, `Join request ${action}ed`, board);
 });
 
@@ -145,6 +145,10 @@ export const removeMemberController = catchAsync(async (
   const { id, userId } = req.params;
 
   const board = await removeMember(id as string, ownerId!, userId as string);
+
+  const io = getIo();
+  io.to(`user:${userId}`).emit("board:removed", { boardId: id, userId });
+  io.to(id as string).emit("board:members_updated", { boardId: id });
 
   return successResponse(res, "Member removed successfully", board);
 });

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { socket } from "../../services/socket/socketClient";
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Select, MenuItem, Box, Typography } from "@mui/material";
 import { useResolveJoinRequestMutation, useGetJoinRequestsQuery } from "../../services/api/boardApi";
 
@@ -32,21 +31,18 @@ export const JoinRequestModal = () => {
   }, [joinRequestsData]);
 
   useEffect(() => {
-    const handleJoinRequest = (payload: JoinRequestPayload) => {
+    if (joinRequestsData?.data) {
       setRequests((prev) => {
-        if (!prev.some(r => r.boardId === payload.boardId && r.userId === payload.userId)) {
-          return [...prev, payload];
-        }
-        return prev;
+        const newReqs = [...prev];
+        joinRequestsData.data.forEach((incoming: JoinRequestPayload) => {
+          if (!newReqs.some(r => r.boardId === incoming.boardId && r.userId === incoming.userId)) {
+            newReqs.push(incoming);
+          }
+        });
+        return newReqs;
       });
-    };
-
-    socket.on("board:join_request", handleJoinRequest);
-
-    return () => {
-      socket.off("board:join_request", handleJoinRequest);
-    };
-  }, []);
+    }
+  }, [joinRequestsData]);
 
   const handleResolve = async (boardId: string, userId: string, action: "accept" | "reject") => {
     try {
