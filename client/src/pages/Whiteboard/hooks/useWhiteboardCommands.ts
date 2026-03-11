@@ -10,6 +10,7 @@ import {
 import { addElement, deleteElement, undo, redo } from "../../../store/canvas/canvasSlice";
 import { socket } from "../../../services/socket/socketClient";
 import { db } from "../../../services/offline/offlineDB";
+import { nextLamport } from "../../../lib/utils/crdt";
 import type { CanvasElement } from "../../../types/element.types";
 
 export const useWhiteboardCommands = (boardId: string | undefined) => {
@@ -20,11 +21,13 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
 
   const emitCreateElement = useCallback((element: CanvasElement) => {
     if (!boardId) return;
-    dispatch(addElement(element));
+    const lamportTs = nextLamport();
+    const elementWithTs = { ...element, lamportTs };
+    dispatch(addElement(elementWithTs));
     if (navigator.onLine) {
-      socket.emit("element:create", { boardId, element });
+      socket.emit("element:create", { boardId, element: elementWithTs });
     } else {
-      db.operations.add({ boardId, elementId: element._id, operation: "create", payload: element, clientVersion: element.version });
+      db.operations.add({ boardId, elementId: element._id, operation: "create", payload: elementWithTs, clientVersion: element.version, lamportTs });
     }
   }, [boardId, dispatch]);
 

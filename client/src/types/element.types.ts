@@ -25,6 +25,11 @@ export interface ElementStyle {
   opacity: number;
 }
 
+export interface LamportTimestamp {
+  clientId: string;
+  seq: number;
+}
+
 export interface CanvasElement {
   _id: string;
 
@@ -47,4 +52,7 @@ export interface CanvasElement {
   imageUrl?: string;
 
   version: number;
+
+  /** CRDT logical timestamp — set by the creating/updating client */
+  lamportTs?: LamportTimestamp;
 }

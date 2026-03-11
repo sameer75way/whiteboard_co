@@ -13,6 +13,7 @@ import {
   removeCursor
 } from "../../store/collaboration/collabSlice";
 
+import { applyLww, advanceLocalClock } from "../../lib/utils/crdt";
 import type { CanvasElement } from "../../types/element.types";
 
 interface CursorMovedPayload {
@@ -32,17 +33,37 @@ interface UserLeftPayload {
 
 export const registerSocketHandlers = (): (() => void) => {
 
-  const handleCreated = (element: CanvasElement) => store.dispatch(addElementLocally(element));
+  const handleCreated = (incoming: CanvasElement) => {
+    const state = store.getState().canvas;
+    const local = state.elements[incoming._id];
+    if (incoming.lamportTs) advanceLocalClock(incoming.lamportTs.seq);
+    const winner = applyLww(local, incoming);
+    store.dispatch(addElementLocally(winner));
+  };
+
   const handleConflict = () => store.dispatch(setConflict(true));
-  const handleUpdated = (element: CanvasElement) => store.dispatch(updateElementLocally(element));
-  const handleDeleted = (payload: ElementDeletedPayload) => store.dispatch(deleteElementLocally(payload.elementId));
-  const handleCursorMoved = (payload: CursorMovedPayload) => store.dispatch(updateCursor({
-    userId: payload.userId,
-    name: payload.name,
-    x: payload.x,
-    y: payload.y
-  }));
-  const handleUserLeft = (payload: UserLeftPayload) => store.dispatch(removeCursor(payload.userId));
+
+  const handleUpdated = (incoming: CanvasElement) => {
+    const state = store.getState().canvas;
+    const local = state.elements[incoming._id];
+    if (incoming.lamportTs) advanceLocalClock(incoming.lamportTs.seq);
+    const winner = applyLww(local, incoming);
+    store.dispatch(updateElementLocally(winner));
+  };
+
+  const handleDeleted = (payload: ElementDeletedPayload) =>
+    store.dispatch(deleteElementLocally(payload.elementId));
+
+  const handleCursorMoved = (payload: CursorMovedPayload) =>
+    store.dispatch(updateCursor({
+      userId: payload.userId,
+      name: payload.name,
+      x: payload.x,
+      y: payload.y
+    }));
+
+  const handleUserLeft = (payload: UserLeftPayload) =>
+    store.dispatch(removeCursor(payload.userId));
 
   socket.on("element:created", handleCreated);
   socket.on("sync:conflict", handleConflict);

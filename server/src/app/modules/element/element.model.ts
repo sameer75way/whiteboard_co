@@ -28,6 +28,11 @@ interface Style {
   fontSize?: number;
 }
 
+export interface LamportTimestamp {
+  clientId: string;
+  seq: number;
+}
+
 export interface IElement {
   _id: string;
   boardId: mongoose.Types.ObjectId;
@@ -40,6 +45,7 @@ export interface IElement {
   points?: number[];
   imageUrl?: string;
   version: number;
+  lamportTs?: LamportTimestamp;
   createdBy: mongoose.Types.ObjectId;
   updatedBy: mongoose.Types.ObjectId;
 }
@@ -103,6 +109,11 @@ const elementSchema = new mongoose.Schema<IElement>(
     version: {
       type: Number,
       default: 1
+    },
+
+    lamportTs: {
+      clientId: { type: String },
+      seq: { type: Number }
     },
 
     createdBy: {

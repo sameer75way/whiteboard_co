@@ -5,7 +5,7 @@ import {
   updateElement,
   deleteElement
 } from "../modules/element/element.service";
-import { IElement } from "../modules/element/element.model";
+import { IElement, LamportTimestamp } from "../modules/element/element.model";
 
 
 interface JoinBoardPayload {
@@ -21,6 +21,8 @@ interface UpdateElementPayload {
   boardId: string;
   elementId: string;
   payload: Partial<IElement>;
+  /** CRDT logical timestamp from the client */
+  lamportTs?: LamportTimestamp;
 }
 
 interface DeleteElementPayload {
@@ -35,7 +37,14 @@ interface CursorMovePayload {
   name?: string;
 }
 
-
+interface OfflineOp {
+  boardId: string;
+  elementId: string;
+  operation: "create" | "update" | "delete";
+  payload: Partial<IElement>;
+  lamportTs?: LamportTimestamp;
+  clientVersion: number;
+}
 
 export const registerSocketHandlers = (
   io: Server,
@@ -65,7 +74,6 @@ export const registerSocketHandlers = (
     const { boardId } = data;
     socket.join(boardId);
     activeBoards.add(boardId);
-
     io.to(boardId).emit("user:joined", { userId });
     await broadcastPresence(boardId);
   });
@@ -74,7 +82,6 @@ export const registerSocketHandlers = (
     const { boardId } = data;
     socket.leave(boardId);
     activeBoards.delete(boardId);
-
     io.to(boardId).emit("user:left", { userId });
     await broadcastPresence(boardId);
   });
@@ -91,112 +98,79 @@ export const registerSocketHandlers = (
   });
 
 
-
   socket.on("element:create", async (data: CreateElementPayload) => {
-
     try {
-
       const { boardId, element } = data;
-
       const newElement = await createElement(
         boardId,
         userId,
         element as Partial<IElement>
       );
-
       socket.to(boardId).emit("element:created", newElement);
-
     } catch (error) {
-
       console.error("Socket create element error:", error);
-
     }
-
   });
-
 
 
   socket.on("element:update", async (data: UpdateElementPayload) => {
-
     try {
+      const { boardId, elementId, payload, lamportTs } = data;
 
-      const { boardId, elementId, payload } = data;
-
-      const element = await updateElement(
+      const { element, accepted } = await updateElement(
         elementId,
         userId,
-        payload as Partial<IElement>
+        payload as Partial<IElement>,
+        lamportTs
       );
 
-      socket.to(boardId).emit("element:updated", element);
-
+      if (accepted) {
+        socket.to(boardId).emit("element:updated", element);
+      } else {
+        socket.emit("element:updated", element);
+        console.log(`[CRDT] Stale update for ${elementId} — sent authoritative state to sender`);
+      }
     } catch (error) {
-
       console.error("Socket update element error:", error);
-
     }
-
   });
-
 
 
   socket.on("element:delete", async (data: DeleteElementPayload) => {
-
     try {
-
       const { boardId, elementId } = data;
-
       await deleteElement(elementId);
-
-      socket.to(boardId).emit("element:deleted", {
-        elementId
-      });
-
+      socket.to(boardId).emit("element:deleted", { elementId });
     } catch (error) {
-
       console.error("Socket delete element error:", error);
-
     }
-
   });
-
-  
 
   socket.on("cursor:move", (data: CursorMovePayload) => {
     const { boardId, x, y, name } = data;
-    socket.to(boardId).emit("cursor:moved", {
-      userId,
-      name,
-      x,
-      y
-    });
+    socket.to(boardId).emit("cursor:moved", { userId, name, x, y });
   });
 
 
-
-  interface OfflineOp {
-    boardId: string;
-    elementId: string;
-    operation: "create" | "update" | "delete";
-    payload: Partial<IElement>;
-    clientVersion: number;
-  }
-
   socket.on("sync:operations", async (operations: OfflineOp[]) => {
-
     for (const op of operations) {
-
       try {
-
         if (op.operation === "create") {
           const el = await createElement(op.boardId, userId, op.payload);
           io.to(op.boardId).emit("element:created", el);
         }
 
         if (op.operation === "update") {
-          const el = await updateElement(op.elementId, userId, op.payload);
-          if (el) {
-            io.to(op.boardId).emit("element:updated", el);
+          const { element, accepted } = await updateElement(
+            op.elementId,
+            userId,
+            op.payload,
+            op.lamportTs
+          );
+          if (accepted) {
+            io.to(op.boardId).emit("element:updated", element);
+          } else {
+            socket.emit("element:updated", element);
           }
         }
 
@@ -204,13 +178,10 @@ export const registerSocketHandlers = (
           await deleteElement(op.elementId);
           io.to(op.boardId).emit("element:deleted", { elementId: op.elementId });
         }
-
       } catch (err) {
         console.error(`sync:operations error for op ${op.operation}:`, err);
       }
-
     }
-
   });
 
 };

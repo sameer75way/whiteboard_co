@@ -1,5 +1,5 @@
 import Dexie, {type  Table } from "dexie";
-import type { CanvasElement } from "../../types/element.types";
+import type { CanvasElement, LamportTimestamp } from "../../types/element.types";
 
 export interface OfflineOperation {
   id?: number;
@@ -8,6 +8,7 @@ export interface OfflineOperation {
   operation: "create" | "update" | "delete";
   payload: Partial<CanvasElement>;
   clientVersion: number;
+  lamportTs?: LamportTimestamp;
 }
 
 class WhiteboardDB extends Dexie {

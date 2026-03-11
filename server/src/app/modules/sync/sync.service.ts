@@ -1,10 +1,13 @@
 import { Types } from "mongoose";
-import { ElementModel, type IElement } from "../element/element.model";
+import { ElementModel, type IElement, type LamportTimestamp } from "../element/element.model";
+import { createElement, updateElement, deleteElement } from "../element/element.service";
 
 interface SyncOperation {
   elementId: string;
+  boardId: string;
   operation: "create" | "update" | "delete";
   payload?: Partial<IElement>;
+  lamportTs?: LamportTimestamp;
   clientVersion: number;
 }
 
@@ -15,49 +18,50 @@ export const processSync = async (
 ) => {
 
   const applied: (IElement | { deleted: string })[] = [];
-  const rejected: SyncOperation[] = [];
+  const rejected: { op: SyncOperation; authoritative: IElement }[] = [];
 
   for (const op of operations) {
 
-    const element = await ElementModel.findById(op.elementId);
-
-    if (!element) {
-      rejected.push(op);
+    if (op.operation === "create") {
+      const existing = await ElementModel.findById(op.elementId);
+      if (!existing && op.payload) {
+        const el = await createElement(op.boardId ?? boardId, userId, op.payload);
+        applied.push(el as unknown as IElement);
+      }
       continue;
     }
 
-    if (element.version > op.clientVersion) {
-
-      rejected.push(op);
-
+    if (op.operation === "update" && op.payload) {
+      try {
+        const { element, accepted } = await updateElement(
+          op.elementId,
+          userId,
+          op.payload,
+          op.lamportTs
+        );
+        if (accepted) {
+          applied.push(element);
+        } else {
+          rejected.push({ op, authoritative: element });
+        }
+      } catch {
+      }
       continue;
-    }
-
-    if (op.operation === "update") {
-
-      Object.assign(element, op.payload);
-
-      element.version += 1;
-
-      element.updatedBy = new Types.ObjectId(userId);
-
-      await element.save();
-
-      applied.push(element);
-
     }
 
     if (op.operation === "delete") {
-
-      await element.deleteOne();
-
-      applied.push({ deleted: op.elementId });
-
+      try {
+        await deleteElement(op.elementId);
+        applied.push({ deleted: op.elementId });
+      } catch {
+      }
+      continue;
     }
-
   }
 
-  const currentState = await ElementModel.find({ boardId });
+  const currentState = await ElementModel.find({
+    boardId: new Types.ObjectId(boardId)
+  });
 
   return {
     applied,
