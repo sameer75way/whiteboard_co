@@ -81,6 +81,7 @@ export const WhiteboardPage = () => {
 
   return (
     <div
+      id="whiteboard-container"
       style={{
         position: "relative",
         width: "100%",

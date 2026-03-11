@@ -113,12 +113,20 @@ export const CanvasBoard = ({ boardId }: Props) => {
 
     const clampedScale = Math.max(0.1, Math.min(5, newScale));
 
-    stage.scale({ x: clampedScale, y: clampedScale });
-    stage.position({
+    const newPos = {
       x: pointer.x - mousePointTo.x * clampedScale,
       y: pointer.y - mousePointTo.y * clampedScale
-    });
+    };
+
+    stage.scale({ x: clampedScale, y: clampedScale });
+    stage.position(newPos);
     stage.batchDraw();
+
+    const bgContainer = document.getElementById('whiteboard-container');
+    if (bgContainer) {
+      bgContainer.style.backgroundPosition = `${newPos.x}px ${newPos.y}px`;
+      bgContainer.style.backgroundSize = `${40 * clampedScale}px ${40 * clampedScale}px`;
+    }
   }, []);
 
   const handleStageMouseDown = useCallback((e: KonvaEventObject<MouseEvent>) => {
@@ -238,6 +246,16 @@ export const CanvasBoard = ({ boardId }: Props) => {
         onMouseMove={handleMouseMove}
         onWheel={handleWheel}
         onMouseDown={handleStageMouseDown}
+        onDragMove={(e) => {
+          if (e.target === e.target.getStage()) {
+            const stage = e.target.getStage();
+            if (!stage) return;
+            const bgContainer = document.getElementById('whiteboard-container');
+            if (bgContainer) {
+              bgContainer.style.backgroundPosition = `${stage.x()}px ${stage.y()}px`;
+            }
+          }
+        }}
       >
         <Layer ref={layerRef}>
           {elementList.map((el) => (
