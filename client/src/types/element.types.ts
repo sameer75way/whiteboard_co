@@ -53,6 +53,5 @@ export interface CanvasElement {
 
   version: number;
 
-  /** CRDT logical timestamp — set by the creating/updating client */
   lamportTs?: LamportTimestamp;
 }

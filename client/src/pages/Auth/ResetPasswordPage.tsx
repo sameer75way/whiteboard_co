@@ -106,7 +106,8 @@ export const ResetPasswordPage = () => {
         accessToken: response.data.accessToken
       }));
       navigate('/dashboard');
-    } catch (err) {
+    } catch {
+      return;
     }
   };
 

@@ -18,29 +18,20 @@ export const JoinRequestModal = () => {
 
   useEffect(() => {
     if (joinRequestsData?.data) {
-      setRequests(prev => {
-        const newReqs = [...prev];
-        joinRequestsData.data.forEach((incoming: JoinRequestPayload) => {
-          if (!newReqs.some(r => r.boardId === incoming.boardId && r.userId === incoming.userId)) {
-            newReqs.push(incoming);
-          }
+      const timer = setTimeout(() => {
+        setRequests(prev => {
+          let changed = false;
+          const newReqs = [...prev];
+          joinRequestsData.data.forEach((incoming: JoinRequestPayload) => {
+            if (!newReqs.some(r => r.boardId === incoming.boardId && r.userId === incoming.userId)) {
+              newReqs.push(incoming);
+              changed = true;
+            }
+          });
+          return changed ? newReqs : prev;
         });
-        return newReqs;
-      });
-    }
-  }, [joinRequestsData]);
-
-  useEffect(() => {
-    if (joinRequestsData?.data) {
-      setRequests((prev) => {
-        const newReqs = [...prev];
-        joinRequestsData.data.forEach((incoming: JoinRequestPayload) => {
-          if (!newReqs.some(r => r.boardId === incoming.boardId && r.userId === incoming.userId)) {
-            newReqs.push(incoming);
-          }
-        });
-        return newReqs;
-      });
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [joinRequestsData]);
 

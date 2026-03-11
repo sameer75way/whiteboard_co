@@ -59,7 +59,6 @@ export const deleteBoardController = catchAsync(async (
 
   await deleteBoard(id as string, userId!, userRole);
 
-  // Notify everyone in the board room in real-time
   const io = getIo();
   io.to(id as string).emit("board:deleted", { boardId: id });
 
@@ -95,9 +94,7 @@ export const updateRoleController = catchAsync(async (
   const board = await updateMemberRole(id as string, ownerId!, userId, role);
 
   const io = getIo();
-  // Notify everyone in the board room — their toolbar/role UI will update
   io.to(id as string).emit("board:role_updated", { boardId: id, userId, role });
-  // Also push directly to the affected user's personal room (they may not be on the board page)
   io.to(`user:${userId}`).emit("board:role_updated", { boardId: id, userId, role });
 
   return successResponse(res, "Role updated", board);
@@ -126,12 +123,10 @@ export const resolveJoinRequestController = catchAsync(async (
   const board = await resolveJoinRequest(id as string, ownerId!, userId, action, role);
 
   const io = getIo();
-  // Push the resolution directly to the waiting user
   io.to(`user:${userId}`).emit("board:join_resolved", {
     boardId: id,
     status: action === "accept" ? "Accepted" : "Rejected"
   });
-  // Notify all board members that the member list changed
   io.to(id as string).emit("board:members_updated", { boardId: id });
 
   return successResponse(res, `Join request ${action}ed`, board);

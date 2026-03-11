@@ -57,7 +57,7 @@ export const WhiteboardPage = () => {
       navigator.clipboard.writeText(board.shareCode);
       setShareSnackbarOpen(true);
     }
-  }, [board?.shareCode]);
+  }, [board]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {

@@ -26,7 +26,7 @@ export const processSync = async (
       const existing = await ElementModel.findById(op.elementId);
       if (!existing && op.payload) {
         const el = await createElement(op.boardId ?? boardId, userId, op.payload);
-        applied.push(el as unknown as IElement);
+        applied.push(el as IElement);
       }
       continue;
     }
@@ -45,6 +45,7 @@ export const processSync = async (
           rejected.push({ op, authoritative: element });
         }
       } catch {
+        continue;
       }
       continue;
     }
@@ -54,6 +55,7 @@ export const processSync = async (
         await deleteElement(op.elementId);
         applied.push({ deleted: op.elementId });
       } catch {
+        continue;
       }
       continue;
     }

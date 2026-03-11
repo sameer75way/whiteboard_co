@@ -105,6 +105,7 @@ export const RegisterPage = () => {
       }));
       navigate('/dashboard');
     } catch {
+      return;
     }
   };
 

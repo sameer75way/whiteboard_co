@@ -22,6 +22,7 @@ export const syncOfflineOperations = async (boardId: string) => {
     await db.operations.clear();
 
   } catch {
+    return;
   }
 
 };

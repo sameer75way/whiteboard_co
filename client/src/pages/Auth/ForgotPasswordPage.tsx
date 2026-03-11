@@ -109,7 +109,8 @@ export const ForgotPasswordPage = () => {
     try {
       await forgotPassword({ email: data.email }).unwrap();
       setSubmitted(true);
-    } catch (err) {
+    } catch {
+      return;
     }
   };
 

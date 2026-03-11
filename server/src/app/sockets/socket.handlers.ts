@@ -21,7 +21,6 @@ interface UpdateElementPayload {
   boardId: string;
   elementId: string;
   payload: Partial<IElement>;
-  /** CRDT logical timestamp from the client */
   lamportTs?: LamportTimestamp;
 }
 

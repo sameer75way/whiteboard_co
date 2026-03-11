@@ -105,6 +105,7 @@ export const LoginPage = () => {
       }));
       navigate('/dashboard');
     } catch {
+      return;
     }
   };
 
