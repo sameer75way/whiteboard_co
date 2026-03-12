@@ -11,6 +11,7 @@ export const createElement = async (
 
   const element = await ElementModel.create({
     ...payload,
+    _id: payload._id || new Types.ObjectId().toHexString(),
     boardId: new Types.ObjectId(boardId),
     createdBy: new Types.ObjectId(userId),
     updatedBy: new Types.ObjectId(userId)
@@ -46,7 +47,13 @@ export const updateElement = async (
       return { element: element.toObject() as IElement, accepted: false };
     }
   }
-  Object.assign(element, payload);
+
+  const restrictedFields = ["_id", "boardId", "createdBy", "createdAt", "updatedAt"];
+  const filteredPayload = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => !restrictedFields.includes(key))
+  );
+
+  Object.assign(element, filteredPayload);
   element.version += 1;
   element.updatedBy = new Types.ObjectId(userId);
 

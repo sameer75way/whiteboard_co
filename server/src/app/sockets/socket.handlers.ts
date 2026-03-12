@@ -105,7 +105,7 @@ export const registerSocketHandlers = (
         userId,
         element as Partial<IElement>
       );
-      socket.to(boardId).emit("element:created", newElement);
+      io.to(boardId).emit("element:created", newElement);
     } catch (error) {
       console.error("Socket create element error:", error);
     }
@@ -181,6 +181,7 @@ export const registerSocketHandlers = (
         console.error(`sync:operations error for op ${op.operation}:`, err);
       }
     }
+    socket.emit("sync:acknowledged");
   });
 
 };

@@ -48,6 +48,7 @@ export interface IElement {
   lamportTs?: LamportTimestamp;
   createdBy: mongoose.Types.ObjectId;
   updatedBy: mongoose.Types.ObjectId;
+  zIndex: number;
 }
 
 const elementSchema = new mongoose.Schema<IElement>(
@@ -114,6 +115,10 @@ const elementSchema = new mongoose.Schema<IElement>(
     lamportTs: {
       clientId: { type: String },
       seq: { type: Number }
+    },
+    zIndex: {
+      type: Number,
+      default: 0
     },
 
     createdBy: {

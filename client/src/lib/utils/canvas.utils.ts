@@ -25,7 +25,8 @@ export const createRectangleElement = (
       strokeWidth: 2,
       opacity: 1
     },
-    version: 1
+    version: 1,
+    zIndex: 0
   };
 };
 
@@ -50,7 +51,8 @@ export const createTextElement = (
       strokeWidth: 0,
       opacity: 1
     },
-    version: 1
+    version: 1,
+    zIndex: 0
   };
 };
 
@@ -75,7 +77,8 @@ export const createStickyNote = (
       strokeWidth: 2,
       opacity: 1
     },
-    version: 1
+    version: 1,
+    zIndex: 0
   };
 };
 
@@ -100,6 +103,7 @@ export const createCircleElement = (
       strokeWidth: 2,
       opacity: 1
     },
-    version: 1
+    version: 1,
+    zIndex: 0
   };
 };

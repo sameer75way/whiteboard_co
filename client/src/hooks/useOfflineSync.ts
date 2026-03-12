@@ -12,8 +12,15 @@ export const useOfflineSync = () => {
       if (!navigator.onLine) return;
       const operations = await getOfflineOperations();
       if (!operations.length) return;
+      
       socket.emit("sync:operations", operations);
-      await clearOfflineOperations();
+      
+      const onAck = async () => {
+        await clearOfflineOperations();
+        socket.off("sync:acknowledged", onAck);
+      };
+      
+      socket.on("sync:acknowledged", onAck);
     };
     if (navigator.onLine) {
       handleOnline();

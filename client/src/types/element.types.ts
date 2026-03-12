@@ -54,4 +54,5 @@ export interface CanvasElement {
   version: number;
 
   lamportTs?: LamportTimestamp;
+  zIndex: number;
 }

@@ -245,7 +245,7 @@ export const removeMember = async (boardId: string, ownerId: string, targetUserI
   await board.save();
 
   const io = getIo();
-  io.to(`board:${boardId}`).emit("board:removed", { boardId, userId: targetUserId });
+  io.to(boardId).emit("board:removed", { boardId, userId: targetUserId });
 
   return board.populate("members.user", "name email");
 };

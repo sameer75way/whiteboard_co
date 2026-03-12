@@ -18,7 +18,7 @@ const initialState: CanvasState = {
 };
 
 function pushHistory(state: CanvasState) {
-  state.historyPast.push({ ...state.elements });
+  state.historyPast.push(JSON.parse(JSON.stringify(state.elements)));
   if (state.historyPast.length > MAX_HISTORY) {
     state.historyPast.shift();
   }

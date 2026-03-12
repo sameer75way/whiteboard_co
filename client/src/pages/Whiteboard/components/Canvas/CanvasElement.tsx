@@ -1,6 +1,7 @@
 import { Group, Rect, Circle, Text } from "react-konva";
 import { type KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
+import { store } from "../../../../store/index";
 
 import { useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -16,6 +17,7 @@ import {
 import type { CanvasElement as Element } from "../../../../types/element.types";
 
 import { socket } from "../../../../services/socket/socketClient";
+import { nextLamport } from "../../../../lib/utils/crdt";
 
 interface Props {
   element: Element;
@@ -31,20 +33,23 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   const lastCursorEmitRef = useRef<number>(0);
 
   const broadcastUpdate = useCallback(async (updated: Element) => {
-    dispatch(updateElement(updated));
+    const lamportTs = nextLamport();
+    const elementWithTs = { ...updated, lamportTs };
+    dispatch(updateElement(elementWithTs));
     if (navigator.onLine) {
       socket.emit("element:update", {
         boardId,
         elementId: element._id,
-        payload: updated
+        payload: elementWithTs
       });
     } else {
       await db.operations.add({
         boardId: element.boardId || "",
         elementId: element._id,
         operation: "update",
-        payload: updated,
-        clientVersion: element.version
+        payload: elementWithTs,
+        clientVersion: element.version,
+        lamportTs
       });
     }
   }, [boardId, element._id, element.boardId, element.version, dispatch]);
@@ -52,14 +57,38 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   const handleSelect = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     e.cancelBubble = true;
     e.target.moveToTop();
+    
+    const allElements = Object.values(store.getState().canvas.elements) as Element[];
+    const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
+    
+    if (element.zIndex <= maxZ) {
+      broadcastUpdate({
+        ...element,
+        zIndex: maxZ + 1,
+        version: element.version + 1
+      });
+    }
+    
     dispatch(selectElement(element._id));
-  }, [dispatch, element._id]);
+  }, [dispatch, element, broadcastUpdate]);
 
   const handleDragStart = useCallback((e: KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
     e.target.moveToTop();
+
+    const allElements = Object.values(store.getState().canvas.elements) as Element[];
+    const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
+
+    if (element.zIndex <= maxZ) {
+      broadcastUpdate({
+        ...element,
+        zIndex: maxZ + 1,
+        version: element.version + 1
+      });
+    }
+
     dispatch(selectElement(element._id));
-  }, [dispatch, element._id]);
+  }, [dispatch, element, broadcastUpdate]);
 
   const handleDragEnd = useCallback((e: KonvaEventObject<DragEvent>) => {
     const node = e.target;

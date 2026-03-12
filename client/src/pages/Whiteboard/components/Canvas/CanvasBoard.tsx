@@ -10,6 +10,7 @@ import type Konva from "konva";
 
 import type { RootState } from "../../../../store/index";
 
+import { nextLamport } from "../../../../lib/utils/crdt";
 import { CanvasElement } from "./CanvasElement";
 
 import { socket } from "../../../../services/socket/socketClient";
@@ -53,7 +54,9 @@ export const CanvasBoard = ({ boardId }: Props) => {
   
   const userName = useSelector((state: RootState) => state.auth.user?.name);
 
-  const elementList = useMemo(() => Object.values(elements), [elements]);
+  const elementList = useMemo(() => {
+    return Object.values(elements).sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [elements]);
 
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -169,13 +172,20 @@ export const CanvasBoard = ({ boardId }: Props) => {
     if (!textEdit) return;
     const el = elements[textEdit.elementId];
     if (el) {
-      const updated = { ...el, content: textEdit.text, version: el.version + 1 };
+      const lamportTs = nextLamport();
+      const updated = { 
+        ...el, 
+        content: textEdit.text, 
+        version: el.version + 1,
+        lamportTs 
+      };
       dispatch(updateElement(updated));
       if (navigator.onLine) {
         socket.emit("element:update", {
           boardId,
           elementId: el._id,
-          payload: updated
+          payload: updated,
+          lamportTs
         });
       }
     }
