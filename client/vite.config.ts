@@ -26,11 +26,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          mui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
-          konva: ['konva', 'react-konva'],
-          redux: ['@reduxjs/toolkit', 'react-redux', 'redux-persist']
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('konva')) return 'konva';
+            if (id.includes('@mui') || id.includes('@emotion')) return 'mui';
+            if (id.includes('dexie') || id.includes('idb')) return 'db';
+            if (id.match(/node_modules\/(react|react-dom|scheduler)\//)) return 'core';
+          }
         }
       }
     }

@@ -5,7 +5,9 @@ import {
   createRectangleElement,
   createCircleElement,
   createTextElement,
-  createStickyNote
+  createStickyNote,
+  createTriangleElement,
+  createLineElement
 } from "../../../lib/utils/canvas.utils";
 import { addElement, deleteElement, undo, redo } from "../../../store/canvas/canvasSlice";
 import { socket } from "../../../services/socket/socketClient";
@@ -61,6 +63,16 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
   const handleCreateSticky = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
     emitCreateElement(createStickyNote(boardId, x ?? 200, y ?? 200));
+  }, [boardId, emitCreateElement]);
+
+  const handleCreateTriangle = useCallback((x?: number, y?: number) => {
+    if (!boardId) return;
+    emitCreateElement(createTriangleElement(boardId, x ?? 250, y ?? 250));
+  }, [boardId, emitCreateElement]);
+
+  const handleCreateLine = useCallback((x?: number, y?: number) => {
+    if (!boardId) return;
+    emitCreateElement(createLineElement(boardId, x ?? 200, y ?? 300));
   }, [boardId, emitCreateElement]);
 
   const handleDelete = useCallback(() => {
@@ -120,6 +132,8 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     handleCreateCircle,
     handleCreateText,
     handleCreateSticky,
+    handleCreateTriangle,
+    handleCreateLine,
     handleDelete,
     computeStateDiffAndSync,
     selectedElementId

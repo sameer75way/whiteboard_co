@@ -1,6 +1,8 @@
 import { Tooltip, IconButton, Box, Divider } from "@mui/material";
 import RectangleOutlinedIcon from "@mui/icons-material/RectangleOutlined";
 import CircleOutlinedIcon from "@mui/icons-material/CircleOutlined";
+import ChangeHistoryIcon from "@mui/icons-material/ChangeHistory";
+import HorizontalRuleIcon from "@mui/icons-material/HorizontalRule";
 import TextFieldsIcon from "@mui/icons-material/TextFields";
 import StickyNote2OutlinedIcon from "@mui/icons-material/StickyNote2Outlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -11,6 +13,8 @@ import { styled } from "@mui/material/styles";
 interface Props {
   onRectangle: () => void;
   onCircle: () => void;
+  onTriangle: () => void;
+  onLine: () => void;
   onText: () => void;
   onSticky: () => void;
   onDelete: () => void;
@@ -131,6 +135,8 @@ const ToolBtn = ({
 export const Toolbar = ({
   onRectangle,
   onCircle,
+  onTriangle,
+  onLine,
   onText,
   onSticky,
   onDelete,
@@ -145,6 +151,12 @@ export const Toolbar = ({
       </ToolBtn>
       <ToolBtn title="Circle (C)" onClick={onCircle} toolType="circle">
         <CircleOutlinedIcon fontSize="small" />
+      </ToolBtn>
+      <ToolBtn title="Triangle" onClick={onTriangle} toolType="triangle">
+        <ChangeHistoryIcon fontSize="small" />
+      </ToolBtn>
+      <ToolBtn title="Line" onClick={onLine} toolType="line">
+        <HorizontalRuleIcon fontSize="small" />
       </ToolBtn>
       <ToolBtn title="Text (T)" onClick={onText} toolType="text">
         <TextFieldsIcon fontSize="small" />

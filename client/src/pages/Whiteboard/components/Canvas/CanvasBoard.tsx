@@ -204,7 +204,9 @@ export const CanvasBoard = ({ boardId }: Props) => {
     handleCreateRectangle, 
     handleCreateCircle, 
     handleCreateText, 
-    handleCreateSticky 
+    handleCreateSticky,
+    handleCreateTriangle,
+    handleCreateLine
   } = useWhiteboardCommands(boardId);
 
   const onDrop = (e: React.DragEvent) => {
@@ -235,6 +237,12 @@ export const CanvasBoard = ({ boardId }: Props) => {
         break;
       case "sticky":
         handleCreateSticky(x, y);
+        break;
+      case "triangle":
+        handleCreateTriangle(x, y);
+        break;
+      case "line":
+        handleCreateLine(x, y);
         break;
       default:
         break;

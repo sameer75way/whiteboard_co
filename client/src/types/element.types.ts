@@ -6,7 +6,9 @@ export type ElementType =
   | "text"
   | "pencil"
   | "image"
-  | "sticky";
+  | "sticky"
+  | "triangle"
+  | "line";
 
 export interface ElementPosition {
   x: number;

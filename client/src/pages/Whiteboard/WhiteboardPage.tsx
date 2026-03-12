@@ -5,6 +5,7 @@ import { type RootState } from "../../store/index";
 import { useOfflineSync } from "../../hooks/useOfflineSync";
 import { CanvasBoard } from "./components/Canvas/CanvasBoard";
 import { Toolbar } from "./components/Toolbar/Toolbar";
+import { StylePanel } from "./components/Toolbar/StylePanel";
 import { CollaboratorCursors } from "./components/Collab/CollaboratorCursors";
 import { ConnectionStatusBar } from "./components/Sync/ConnectionStatusBar";
 import { setElements } from "../../store/canvas/canvasSlice";
@@ -40,6 +41,8 @@ export const WhiteboardPage = () => {
   const {
     handleCreateRectangle,
     handleCreateCircle,
+    handleCreateTriangle,
+    handleCreateLine,
     handleCreateText,
     handleCreateSticky,
     handleDelete,
@@ -102,16 +105,21 @@ export const WhiteboardPage = () => {
       />
 
       {!isViewer && (
-        <Toolbar
-          onRectangle={handleCreateRectangle}
-          onCircle={handleCreateCircle}
-          onText={handleCreateText}
-          onSticky={handleCreateSticky}
-          onDelete={handleDelete}
-          onUndo={() => computeStateDiffAndSync('undo')}
-          onRedo={() => computeStateDiffAndSync('redo')}
-          hasSelection={!!selectedElementId}
-        />
+        <>
+          <Toolbar
+            onRectangle={handleCreateRectangle}
+            onCircle={handleCreateCircle}
+            onTriangle={handleCreateTriangle}
+            onLine={handleCreateLine}
+            onText={handleCreateText}
+            onSticky={handleCreateSticky}
+            onDelete={handleDelete}
+            onUndo={() => computeStateDiffAndSync('undo')}
+            onRedo={() => computeStateDiffAndSync('redo')}
+            hasSelection={!!selectedElementId}
+          />
+          {selectedElementId && <StylePanel boardId={id} />}
+        </>
       )}
 
       <CanvasBoard boardId={id} />

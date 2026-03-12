@@ -107,3 +107,56 @@ export const createCircleElement = (
     zIndex: 0
   };
 };
+
+export const createTriangleElement = (
+  boardId: string,
+  x: number,
+  y: number
+): CanvasElement => {
+  return {
+    _id: generateId(),
+    boardId,
+    type: "triangle",
+    position: { x, y },
+    dimensions: {
+      width: 150,
+      height: 150
+    },
+    rotation: 0,
+    style: {
+      fill: "#fef08a",
+      stroke: "#eab308",
+      strokeWidth: 2,
+      opacity: 1
+    },
+    version: 1,
+    zIndex: 0
+  };
+};
+
+export const createLineElement = (
+  boardId: string,
+  x: number,
+  y: number
+): CanvasElement => {
+  return {
+    _id: generateId(),
+    boardId,
+    type: "line",
+    position: { x, y },
+    dimensions: {
+      width: 200,
+      height: 20
+    },
+    points: [0, 0, 200, 0],
+    rotation: 0,
+    style: {
+      fill: "transparent",
+      stroke: "#cbd5e1",
+      strokeWidth: 4,
+      opacity: 1
+    },
+    version: 1,
+    zIndex: 0
+  };
+};

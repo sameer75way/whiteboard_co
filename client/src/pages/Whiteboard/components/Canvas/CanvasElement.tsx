@@ -1,4 +1,4 @@
-import { Group, Rect, Circle, Text } from "react-konva";
+import { Group, Rect, Circle, Text, RegularPolygon, Line } from "react-konva";
 import { type KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
 import { store } from "../../../../store/index";
@@ -29,7 +29,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
 
   const dispatch = useDispatch();
   const userName = useSelector((state: RootState) => state.auth.user?.name) || "User";
-  const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group>(null);
+  const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group | Konva.RegularPolygon | Konva.Line>(null);
   const lastCursorEmitRef = useRef<number>(0);
 
   const broadcastUpdate = useCallback(async (updated: Element) => {
@@ -352,6 +352,57 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
           onDblTap={handleDblClick}
         />
       </Group>
+    );
+  }
+
+  if (element.type === "triangle") {
+    return (
+      <RegularPolygon
+        ref={shapeRef as React.RefObject<Konva.RegularPolygon>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        sides={3}
+        radius={element.dimensions.width / 2}
+        rotation={element.rotation || 0}
+        fill={element.style.fill}
+        stroke={element.style.stroke}
+        strokeWidth={element.style.strokeWidth}
+        opacity={element.style.opacity}
+        draggable
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+      />
+    );
+  }
+
+  if (element.type === "line") {
+    return (
+      <Line
+        ref={shapeRef as React.RefObject<Konva.Line>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        points={element.points || [0, 0, element.dimensions.width, 0]}
+        rotation={element.rotation || 0}
+        stroke={element.style.stroke}
+        strokeWidth={element.style.strokeWidth}
+        opacity={element.style.opacity}
+        draggable
+        hitStrokeWidth={Math.max(20, element.style.strokeWidth)}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+      />
     );
   }
 

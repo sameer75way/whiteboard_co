@@ -73,7 +73,7 @@ export const useDashboardLogic = () => {
     } catch (error) {
       setAlertInfo({
         open: true,
-        message: getErrorMessage(error),
+        message: getErrorMessage(error as object),
         severity: "error"
       });
     }
@@ -102,7 +102,7 @@ export const useDashboardLogic = () => {
         setAlertInfo({ open: true, message: "Join request sent! Waiting for owner approval.", severity: "success" });
       }
     } catch (error) {
-      setAlertInfo({ open: true, message: getErrorMessage(error), severity: "error" });
+      setAlertInfo({ open: true, message: getErrorMessage(error as object), severity: "error" });
     }
   }, [joinBoard, navigate, currentUser]);
 
