@@ -10,23 +10,13 @@ import CloseIcon from '@mui/icons-material/Close';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import { useUpdateRoleMutation, useRemoveMemberMutation } from '../../../../services/api/boardApi';
 import type { RootState } from '../../../../store/index';
-
-export interface Member {
-  _id: string;
-  user: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  role: 'Owner' | 'Collaborator' | 'Viewer';
-  status: 'Pending' | 'Accepted';
-}
+import type { BoardMember } from '../../../../types/board.types';
 
 interface AccessManagerModalProps {
   open: boolean;
   onClose: () => void;
   boardId: string;
-  members: Member[];
+  members: BoardMember[];
   isOwner: boolean;
   onRoleChanged: () => void;
 }

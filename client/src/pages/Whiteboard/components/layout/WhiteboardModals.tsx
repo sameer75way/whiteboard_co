@@ -1,12 +1,8 @@
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Snackbar, Alert } from "@mui/material";
-import { AccessManagerModal, type Member } from "../Collab/AccessManagerModal";
+import { AccessManagerModal } from "../Collab/AccessManagerModal";
 import { ConflictModal } from "../Sync/ConflictModal";
 import { useNavigate } from "react-router-dom";
-
-interface BoardData {
-  members: Member[];
-  shareCode?: string;
-}
+import type { Board } from "../../../../types/board.types";
 
 interface WhiteboardModalsProps {
   boardId: string;
@@ -16,7 +12,7 @@ interface WhiteboardModalsProps {
   shareSnackbarOpen: boolean;
   onCloseAccess: () => void;
   onCloseShareSnackbar: () => void;
-  board: BoardData | null | undefined;
+  board: Board | null | undefined;
   isOwner: boolean;
   refetchBoard: () => void;
 }

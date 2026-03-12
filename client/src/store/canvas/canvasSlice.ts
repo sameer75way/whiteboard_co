@@ -93,14 +93,14 @@ const canvasSlice = createSlice({
     undo: (state) => {
       if (state.historyPast.length === 0) return;
       const previous = state.historyPast.pop()!;
-      state.historyFuture.push({ ...state.elements });
+      state.historyFuture.push(JSON.parse(JSON.stringify(state.elements)));
       state.elements = previous;
     },
 
     redo: (state) => {
       if (state.historyFuture.length === 0) return;
       const next = state.historyFuture.pop()!;
-      state.historyPast.push({ ...state.elements });
+      state.historyPast.push(JSON.parse(JSON.stringify(state.elements)));
       state.elements = next;
     }
   }

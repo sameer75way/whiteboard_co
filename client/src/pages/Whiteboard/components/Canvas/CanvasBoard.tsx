@@ -14,19 +14,13 @@ import { nextLamport } from "../../../../lib/utils/crdt";
 import { CanvasElement } from "./CanvasElement";
 
 import { socket } from "../../../../services/socket/socketClient";
-import { db } from "../../../../services/offline/offlineDB";
 
 import {
   selectElement,
   updateElement,
-  addElement
 } from "../../../../store/canvas/canvasSlice";
-import {
-  createRectangleElement,
-  createCircleElement,
-  createTextElement,
-  createStickyNote
-} from "../../../../lib/utils/canvas.utils";
+
+import { useWhiteboardCommands } from "../../hooks/useWhiteboardCommands";
 
 interface Props {
   boardId: string;
@@ -55,7 +49,21 @@ export const CanvasBoard = ({ boardId }: Props) => {
   const userName = useSelector((state: RootState) => state.auth.user?.name);
 
   const elementList = useMemo(() => {
-    return Object.values(elements).sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    return Object.values(elements).sort((a, b) => {
+      if ((a.zIndex || 0) !== (b.zIndex || 0)) {
+        return (a.zIndex || 0) - (b.zIndex || 0);
+      }
+      
+      const aSeq = a.lamportTs?.seq || 0;
+      const bSeq = b.lamportTs?.seq || 0;
+      if (aSeq !== bSeq) return aSeq - bSeq;
+      
+      const aClient = a.lamportTs?.clientId || "";
+      const bClient = b.lamportTs?.clientId || "";
+      if (aClient !== bClient) return aClient.localeCompare(bClient);
+      
+      return a._id.localeCompare(b._id);
+    });
   }, [elements]);
 
   const stageRef = useRef<Konva.Stage>(null);
@@ -192,6 +200,13 @@ export const CanvasBoard = ({ boardId }: Props) => {
     setTextEdit(null);
   }, [textEdit, elements, dispatch, boardId]);
 
+  const { 
+    handleCreateRectangle, 
+    handleCreateCircle, 
+    handleCreateText, 
+    handleCreateSticky 
+  } = useWhiteboardCommands(boardId);
+
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const toolType = e.dataTransfer.getData("application/react-whiteboard-tool");
@@ -208,36 +223,21 @@ export const CanvasBoard = ({ boardId }: Props) => {
     const x = (pointerPosition.x - position.x) / scale;
     const y = (pointerPosition.y - position.y) / scale;
 
-    let element: import("../../../../types/element.types").CanvasElement | undefined;
     switch (toolType) {
       case "rectangle":
-        element = createRectangleElement(boardId, x, y);
+        handleCreateRectangle(x, y);
         break;
       case "circle":
-        element = createCircleElement(boardId, x, y);
+        handleCreateCircle(x, y);
         break;
       case "text":
-        element = createTextElement(boardId, x, y);
+        handleCreateText(x, y);
         break;
       case "sticky":
-        element = createStickyNote(boardId, x, y);
+        handleCreateSticky(x, y);
         break;
       default:
-        return;
-    }
-
-    if (!element) return;
-    dispatch(addElement(element));
-    if (navigator.onLine) {
-      socket.emit("element:create", { boardId, element });
-    } else {
-      db.operations.add({ 
-        boardId, 
-        elementId: element._id, 
-        operation: "create", 
-        payload: element, 
-        clientVersion: element.version 
-      });
+        break;
     }
   };
 

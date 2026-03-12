@@ -1,7 +1,8 @@
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { UserBoardCard } from "./UserBoardCard";
-import type { AdminUser, BoardData } from "./UserBoardCard";
+import type { AdminUser } from "./UserBoardCard";
+import type { Board as BoardData } from "../../../types/board.types";
 
 interface Props {
   users: AdminUser[];

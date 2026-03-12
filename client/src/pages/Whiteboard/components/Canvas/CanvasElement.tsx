@@ -54,40 +54,43 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
     }
   }, [boardId, element._id, element.boardId, element.version, dispatch]);
 
-  const handleSelect = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+  const handlePress = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     e.cancelBubble = true;
-    e.target.moveToTop();
+    
+    e.currentTarget.moveToTop();
     
     const allElements = Object.values(store.getState().canvas.elements) as Element[];
     const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
     
-    if (element.zIndex <= maxZ) {
-      broadcastUpdate({
-        ...element,
-        zIndex: maxZ + 1,
-        version: element.version + 1
-      });
-    }
+    broadcastUpdate({
+      ...element,
+      zIndex: maxZ + 1,
+      version: element.version + 1
+    });
     
     dispatch(selectElement(element._id));
+    
+    const layer = e.currentTarget.getLayer();
+    if (layer) layer.batchDraw();
   }, [dispatch, element, broadcastUpdate]);
 
   const handleDragStart = useCallback((e: KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
-    e.target.moveToTop();
+    e.currentTarget.moveToTop();
 
     const allElements = Object.values(store.getState().canvas.elements) as Element[];
     const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
 
-    if (element.zIndex <= maxZ) {
-      broadcastUpdate({
-        ...element,
-        zIndex: maxZ + 1,
-        version: element.version + 1
-      });
-    }
+    broadcastUpdate({
+      ...element,
+      zIndex: maxZ + 1,
+      version: element.version + 1
+    });
 
     dispatch(selectElement(element._id));
+    
+    const layer = e.currentTarget.getLayer();
+    if (layer) layer.batchDraw();
   }, [dispatch, element, broadcastUpdate]);
 
   const handleDragEnd = useCallback((e: KonvaEventObject<DragEvent>) => {
@@ -221,8 +224,8 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
     const stageBox = stage.container().getBoundingClientRect();
 
     onEditText(element._id, element.content || "", {
-      x: stageBox.left + absPos.x * stage.scaleX() + stage.x(),
-      y: stageBox.top + absPos.y * stage.scaleY() + stage.y(),
+      x: stageBox.left + absPos.x,
+      y: stageBox.top + absPos.y,
       width: (element.dimensions?.width || 200) * stage.scaleX()
     });
   }, [onEditText, element._id, element.content, element.dimensions?.width]);
@@ -243,8 +246,8 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
         draggable
-        onClick={handleSelect}
-        onTap={handleSelect}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -268,8 +271,8 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
         draggable
-        onClick={handleSelect}
-        onTap={handleSelect}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -292,8 +295,8 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         width={element.dimensions.width}
         rotation={element.rotation || 0}
         draggable
-        onClick={handleSelect}
-        onTap={handleSelect}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
         onDblClick={handleDblClick}
         onDblTap={handleDblClick}
         onDragStart={handleDragStart}
@@ -316,8 +319,8 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         height={element.dimensions.height}
         rotation={element.rotation || 0}
         draggable
-        onClick={handleSelect}
-        onTap={handleSelect}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}

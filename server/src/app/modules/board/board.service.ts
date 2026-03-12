@@ -4,6 +4,7 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import { getIo } from "../../sockets/socket.server";
 import { UserModel } from "../auth/auth.model";
+import { ElementModel } from "../element/element.model";
 
 interface BoardMemberPopulated {
   user: { _id: mongoose.Types.ObjectId; toString(): string; name?: string; email?: string };
@@ -85,6 +86,7 @@ export const deleteBoard = async (boardId: string, userId: string, userRole?: st
     throw new AppError("Only owner can delete board", 403);
   }
 
+  await ElementModel.deleteMany({ boardId });
   await board.deleteOne();
 };
 
@@ -227,8 +229,8 @@ export const removeMember = async (boardId: string, ownerId: string, targetUserI
     throw new AppError("Board not found", 404);
   }
 
-  if (board.owner.toString() !== ownerId) {
-    throw new AppError("Only the board owner can remove members", 403);
+  if (board.owner.toString() !== ownerId && ownerId !== targetUserId) {
+    throw new AppError("Only the board owner can remove members, or you can leave the board yourself", 403);
   }
 
   const memberIndex = board.members.findIndex((member) => member.user.toString() === targetUserId);

@@ -11,10 +11,20 @@ import {
 import { baseApi } from "../../../services/api/baseApi";
 import type { RootState } from "../../../store/index";
 
-interface BoardMember {
-  user: string | { _id?: string; id?: string };
-  status: "Pending" | "Accepted";
-  role: string;
+import { getErrorMessage } from "../../../lib/utils/typeGuards";
+
+interface JoinBoardResponse {
+  data: {
+    _id: string;
+    members: { user: string | { _id?: string; id?: string }; status: string; role: string }[];
+  }
+}
+
+interface CreateBoardResponse {
+  data: {
+    _id: string;
+    name: string;
+  }
 }
 
 interface AlertInfo {
@@ -56,18 +66,14 @@ export const useDashboardLogic = () => {
 
   const handleCreateBoard = useCallback(async (name: string) => {
     try {
-      const res = await createBoard({ name }).unwrap();
+      const res = await createBoard({ name }).unwrap() as CreateBoardResponse;
       const board = res.data;
       navigate(`/board/${board._id}`);
       setCreateOpen(false);
     } catch (error) {
-      const message =
-        error && typeof error === "object" && "data" in error
-          ? (error as { data?: { message?: string } }).data?.message
-          : undefined;
       setAlertInfo({
         open: true,
-        message: message ?? "Failed to create board. Name must be at least 2 characters.",
+        message: getErrorMessage(error),
         severity: "error"
       });
     }
@@ -75,12 +81,12 @@ export const useDashboardLogic = () => {
 
   const handleJoinBoard = useCallback(async (shareCode: string) => {
     try {
-      const res = await joinBoard({ shareCode }).unwrap();
+      const res = await joinBoard({ shareCode }).unwrap() as JoinBoardResponse;
       const board = res.data;
       setJoinOpen(false);
 
       const myId = currentUser?.id;
-      const currentMember = board.members.find((member: BoardMember) => {
+      const currentMember = board.members.find((member) => {
         const memberId = typeof member.user === "string"
           ? member.user
           : (member.user?._id ?? member.user?.id ?? "");
@@ -95,8 +101,8 @@ export const useDashboardLogic = () => {
       } else {
         setAlertInfo({ open: true, message: "Join request sent! Waiting for owner approval.", severity: "success" });
       }
-    } catch {
-      setAlertInfo({ open: true, message: "Invalid share code. Please try again.", severity: "error" });
+    } catch (error) {
+      setAlertInfo({ open: true, message: getErrorMessage(error), severity: "error" });
     }
   }, [joinBoard, navigate, currentUser]);
 
@@ -115,14 +121,35 @@ export const useDashboardLogic = () => {
       }
     };
 
+    const handleMembersUpdated = () => {
+      dispatch(baseApi.util.invalidateTags(["Board"]));
+    };
+
+    const handleBoardRemoved = (payload: { userId: string }) => {
+      if (payload.userId === currentUser?.id) {
+        dispatch(baseApi.util.invalidateTags(["Board"]));
+      }
+    };
+
+    const handleBoardDeleted = () => {
+      dispatch(baseApi.util.invalidateTags(["Board"]));
+    };
+
     socket.on("board:join_resolved", handleJoinResolved);
+    socket.on("board:members_updated", handleMembersUpdated);
+    socket.on("board:removed", handleBoardRemoved);
+    socket.on("board:deleted", handleBoardDeleted);
+
     return () => {
       socket.off("board:join_resolved", handleJoinResolved);
+      socket.off("board:members_updated", handleMembersUpdated);
+      socket.off("board:removed", handleBoardRemoved);
+      socket.off("board:deleted", handleBoardDeleted);
     };
-  }, [waitingApprovalOpen, waitingBoardId, navigate, dispatch]);
+  }, [waitingApprovalOpen, waitingBoardId, navigate, dispatch, currentUser?.id]);
 
   const handleCloseAlert = () => {
-    setAlertInfo((prev) => ({ ...prev, open: false }));
+    setAlertInfo((prev: AlertInfo) => ({ ...prev, open: false }));
   };
 
   return {

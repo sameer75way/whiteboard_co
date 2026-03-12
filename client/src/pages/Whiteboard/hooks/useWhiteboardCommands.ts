@@ -21,34 +21,46 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
 
   const emitCreateElement = useCallback((element: CanvasElement) => {
     if (!boardId) return;
+    
+    const allElements = Object.values(store.getState().canvas.elements);
+    const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
+    
     const lamportTs = nextLamport();
-    const elementWithTs = { ...element, lamportTs };
+    const elementWithTs = { ...element, lamportTs, zIndex: maxZ + 1 };
+    
     dispatch(addElement(elementWithTs));
     if (navigator.onLine) {
       socket.emit("element:create", { boardId, element: elementWithTs });
     } else {
-      db.operations.add({ boardId, elementId: element._id, operation: "create", payload: elementWithTs, clientVersion: element.version, lamportTs });
+      db.operations.add({ 
+        boardId, 
+        elementId: element._id, 
+        operation: "create", 
+        payload: elementWithTs, 
+        clientVersion: element.version, 
+        lamportTs 
+      });
     }
   }, [boardId, dispatch]);
 
-  const handleCreateRectangle = useCallback(() => {
+  const handleCreateRectangle = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createRectangleElement(boardId, 200, 200));
+    emitCreateElement(createRectangleElement(boardId, x ?? 200, y ?? 200));
   }, [boardId, emitCreateElement]);
 
-  const handleCreateCircle = useCallback(() => {
+  const handleCreateCircle = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createCircleElement(boardId, 250, 250));
+    emitCreateElement(createCircleElement(boardId, x ?? 250, y ?? 250));
   }, [boardId, emitCreateElement]);
 
-  const handleCreateText = useCallback(() => {
+  const handleCreateText = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createTextElement(boardId, 200, 200));
+    emitCreateElement(createTextElement(boardId, x ?? 200, y ?? 200));
   }, [boardId, emitCreateElement]);
 
-  const handleCreateSticky = useCallback(() => {
+  const handleCreateSticky = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createStickyNote(boardId, 200, 200));
+    emitCreateElement(createStickyNote(boardId, x ?? 200, y ?? 200));
   }, [boardId, emitCreateElement]);
 
   const handleDelete = useCallback(() => {
@@ -83,7 +95,7 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
 
     if (!boardId || !navigator.onLine) return;
 
-    const currentElements = state.elements;
+    const currentElements: Record<string, CanvasElement> = state.elements;
 
     Object.keys(nextElements).forEach((elementId) => {
       const currentElement = currentElements[elementId];

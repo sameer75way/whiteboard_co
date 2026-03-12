@@ -10,13 +10,17 @@ export interface AdminUser {
   createdAt?: string;
 }
 
-export interface BoardData {
+import type { Board as BoardData } from "../../../types/board.types";
+
+export interface AdminUser {
   _id: string;
   name: string;
-  members: Array<{ user: string | { _id: string; name?: string; email?: string }; role: string }>;
+  email: string;
+  role: string;
+  createdAt?: string;
 }
 
-interface Props {
+interface UserBoardCardProps {
   user: AdminUser;
   boards: BoardData[];
 }
@@ -49,7 +53,7 @@ const BoardsList = styled(Box)({
   marginTop: "auto",
 });
 
-export const UserBoardCard = ({ user, boards }: Props) => {
+export const UserBoardCard = ({ user, boards }: UserBoardCardProps) => {
   const userBoards = boards.filter((board) => 
     board.members.some((member) => {
       if (!member.user) return false;

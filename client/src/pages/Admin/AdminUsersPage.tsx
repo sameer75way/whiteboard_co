@@ -3,7 +3,8 @@ import { styled, keyframes } from "@mui/material/styles";
 import { useGetAllUsersQuery } from "../../services/api/authApi";
 import { useGetAllBoardsQuery } from "../../services/api/boardApi";
 import { UserList } from "./components/UserList";
-import type { AdminUser, BoardData } from "./components/UserBoardCard";
+import type { AdminUser } from "./components/UserBoardCard";
+import type { Board as BoardData } from "../../types/board.types";
 
 const gradientAnimation = keyframes`
   0% { background-position: 0% 50%; }
