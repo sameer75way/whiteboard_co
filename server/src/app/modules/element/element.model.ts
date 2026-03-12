@@ -8,7 +8,9 @@ export type ElementType =
   | "text"
   | "pencil"
   | "image"
-  | "sticky";
+  | "sticky"
+  | "triangle"
+  | "line";
 
 interface Position {
   x: number;
@@ -73,7 +75,9 @@ const elementSchema = new mongoose.Schema<IElement>(
         "text",
         "pencil",
         "image",
-        "sticky"
+        "sticky",
+        "triangle",
+        "line"
       ],
       required: true
     },
