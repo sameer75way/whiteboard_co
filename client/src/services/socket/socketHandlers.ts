@@ -5,7 +5,8 @@ import { setConflict } from "../../store/sync/syncSlice";
 import {
   addElementLocally,
   updateElementLocally,
-  deleteElementLocally
+  deleteElementLocally,
+  deleteElementsFromLayer
 } from "../../store/canvas/canvasSlice";
 
 import {
@@ -13,8 +14,18 @@ import {
   removeCursor
 } from "../../store/collaboration/collabSlice";
 
+import {
+  addLayer,
+  updateLayer,
+  removeLayer,
+  reorderLayers
+} from "../../store/layers/layersSlice";
+
+import { addNotification } from "../../store/notifications/notificationsSlice";
+
 import { applyLww, advanceLocalClock } from "../../lib/utils/crdt";
 import type { CanvasElement } from "../../types/element.types";
+import type { Layer } from "../../types/board.types";
 
 interface CursorMovedPayload {
   userId: string;
@@ -29,6 +40,44 @@ interface ElementDeletedPayload {
 
 interface UserLeftPayload {
   userId: string;
+}
+
+interface LayerCreatedPayload {
+  layer: Layer;
+}
+
+interface LayerUpdatedPayload {
+  layerId: string;
+  changes: Partial<Omit<Layer, "id">>;
+}
+
+interface LayerDeletedPayload {
+  layerId: string;
+  fallbackLayerId: string;
+}
+
+interface LayerReorderedPayload {
+  orderedLayerIds: string[];
+}
+
+interface LayerElementMovedPayload {
+  elementId: string;
+  newLayerId: string;
+}
+
+interface LayerEditRejectedPayload {
+  code: string;
+  layerName: string;
+  rejectedOp: string;
+}
+
+interface LayerOfflineRejectedPayload {
+  rejectedOps: {
+    elementId: string;
+    operation: string;
+    layerName: string;
+    code: string;
+  }[];
 }
 
 export const registerSocketHandlers = (): (() => void) => {
@@ -65,12 +114,58 @@ export const registerSocketHandlers = (): (() => void) => {
   const handleUserLeft = (payload: UserLeftPayload) =>
     store.dispatch(removeCursor(payload.userId));
 
+  const handleLayerCreated = (payload: LayerCreatedPayload) =>
+    store.dispatch(addLayer(payload.layer));
+
+  const handleLayerUpdated = (payload: LayerUpdatedPayload) =>
+    store.dispatch(updateLayer({ layerId: payload.layerId, changes: payload.changes }));
+
+  const handleLayerDeleted = (payload: LayerDeletedPayload) => {
+    store.dispatch(deleteElementsFromLayer(payload.layerId));
+    store.dispatch(removeLayer({ layerId: payload.layerId }));
+  };
+
+  const handleLayerReordered = (payload: LayerReorderedPayload) =>
+    store.dispatch(reorderLayers(payload.orderedLayerIds));
+
+  const handleLayerElementMoved = (payload: LayerElementMovedPayload) => {
+    const state = store.getState().canvas;
+    const el = state.elements[payload.elementId];
+    if (el) {
+      store.dispatch(updateElementLocally({ ...el, layerId: payload.newLayerId }));
+    }
+  };
+
+  const handleLayerEditRejected = (payload: LayerEditRejectedPayload) => {
+    store.dispatch(addNotification({
+      id: `reject-${Date.now()}`,
+      message: `Operation "${payload.rejectedOp}" rejected: Layer "${payload.layerName}" is locked.`
+    }));
+  };
+
+  const handleLayerOfflineRejected = (payload: LayerOfflineRejectedPayload) => {
+    const opList = payload.rejectedOps
+      .map((op) => `${op.operation} on "${op.layerName}"`)
+      .join(", ");
+    store.dispatch(addNotification({
+      id: `offline-reject-${Date.now()}`,
+      message: `Offline operations rejected (locked layers): ${opList}`
+    }));
+  };
+
   socket.on("element:created", handleCreated);
   socket.on("sync:conflict", handleConflict);
   socket.on("element:updated", handleUpdated);
   socket.on("element:deleted", handleDeleted);
   socket.on("cursor:moved", handleCursorMoved);
   socket.on("user:left", handleUserLeft);
+  socket.on("layer:created", handleLayerCreated);
+  socket.on("layer:updated", handleLayerUpdated);
+  socket.on("layer:deleted", handleLayerDeleted);
+  socket.on("layer:reordered", handleLayerReordered);
+  socket.on("layer:element:moved", handleLayerElementMoved);
+  socket.on("layer:edit:rejected", handleLayerEditRejected);
+  socket.on("layer:offline:rejected", handleLayerOfflineRejected);
 
   return () => {
     socket.off("element:created", handleCreated);
@@ -79,5 +174,12 @@ export const registerSocketHandlers = (): (() => void) => {
     socket.off("element:deleted", handleDeleted);
     socket.off("cursor:moved", handleCursorMoved);
     socket.off("user:left", handleUserLeft);
+    socket.off("layer:created", handleLayerCreated);
+    socket.off("layer:updated", handleLayerUpdated);
+    socket.off("layer:deleted", handleLayerDeleted);
+    socket.off("layer:reordered", handleLayerReordered);
+    socket.off("layer:element:moved", handleLayerElementMoved);
+    socket.off("layer:edit:rejected", handleLayerEditRejected);
+    socket.off("layer:offline:rejected", handleLayerOfflineRejected);
   };
 };

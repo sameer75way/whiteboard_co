@@ -3,6 +3,8 @@ import { Server, Socket } from "socket.io";
 import { createElement, updateElement, deleteElement } from "../modules/element/element.service";
 import { IElement, LamportTimestamp } from "../modules/element/element.model";
 import { BoardModel } from "../modules/board/board.model";
+import { ElementModel } from "../modules/element/element.model";
+import type { ILayer } from "../modules/layer/layer.model";
 
 
 interface JoinBoardPayload {
@@ -41,6 +43,15 @@ interface OfflineOp {
   lamportTs?: LamportTimestamp;
   clientVersion: number;
 }
+
+const findLayer = (layers: ILayer[], layerId: string): ILayer | undefined =>
+  layers.find((l) => l.id === layerId);
+
+const isLayerLocked = (layers: ILayer[], layerId: string): { locked: boolean; layerName: string } => {
+  const layer = findLayer(layers, layerId);
+  if (!layer) return { locked: false, layerName: "" };
+  return { locked: layer.isLocked, layerName: layer.name };
+};
 
 export const registerSocketHandlers = (
   io: Server,
@@ -114,6 +125,19 @@ export const registerSocketHandlers = (
       
       if (!canEdit) return;
 
+      const targetLayerId = (element as { layerId?: string }).layerId;
+      if (targetLayerId && board) {
+        const { locked, layerName } = isLayerLocked(board.layers, targetLayerId);
+        if (locked) {
+          socket.emit("layer:edit:rejected", {
+            code: "LAYER_LOCKED",
+            layerName,
+            rejectedOp: "create"
+          });
+          return;
+        }
+      }
+
       const newElement = await createElement(
         boardId,
         userId,
@@ -137,6 +161,20 @@ export const registerSocketHandlers = (
       
       if (!canEdit) return;
 
+      const existingElement = await ElementModel.findById(elementId);
+      const targetLayerId = (payload as { layerId?: string }).layerId || existingElement?.layerId;
+      if (targetLayerId && board) {
+        const { locked, layerName } = isLayerLocked(board.layers, targetLayerId);
+        if (locked) {
+          socket.emit("layer:edit:rejected", {
+            code: "LAYER_LOCKED",
+            layerName,
+            rejectedOp: "update"
+          });
+          return;
+        }
+      }
+
       const { element, accepted } = await updateElement(
         elementId,
         userId,
@@ -151,8 +189,12 @@ export const registerSocketHandlers = (
         socket.emit("element:updated", element);
         console.log(`[CRDT] Stale update for ${elementId} — sent authoritative state to sender`);
       }
-    } catch (error) {
-      console.error("Socket update element error:", error);
+    } catch (error: any) {
+      if (error?.statusCode === 404) {
+        console.warn(`Socket update element ignored: Element ${data.elementId} not found (might be deleted or not yet created)`);
+      } else {
+        console.error("Socket update element error:", error);
+      }
     }
   });
 
@@ -166,6 +208,19 @@ export const registerSocketHandlers = (
       const canEdit = member?.role === "Owner" || member?.role === "Collaborator" || socket.data.role === "Admin";
       
       if (!canEdit) return;
+
+      const existingElement = await ElementModel.findById(elementId);
+      if (existingElement?.layerId && board) {
+        const { locked, layerName } = isLayerLocked(board.layers, existingElement.layerId);
+        if (locked) {
+          socket.emit("layer:edit:rejected", {
+            code: "LAYER_LOCKED",
+            layerName,
+            rejectedOp: "delete"
+          });
+          return;
+        }
+      }
 
       await deleteElement(elementId, userId, member?.role || "Viewer");
       socket.to(boardId).emit("element:deleted", { elementId });
@@ -181,24 +236,44 @@ export const registerSocketHandlers = (
 
 
   socket.on("sync:operations", async (operations: OfflineOp[]) => {
+    const rejectedOps: { elementId: string; operation: string; layerName: string; code: "LAYER_LOCKED" }[] = [];
+
     for (const op of operations) {
       try {
-        if (op.operation === "create") {
-          const board = await BoardModel.findById(op.boardId);
-          const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
-          const role = member?.role || "Viewer";
-          
-          if (role === "Viewer") continue;
+        const board = await BoardModel.findById(op.boardId);
+        const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+        const role = member?.role || "Viewer";
+        const canEdit = role === "Owner" || role === "Collaborator";
+        if (!canEdit) continue;
 
+        let targetLayerId = "";
+
+        if (op.operation === "create") {
+          targetLayerId = (op.payload as { layerId?: string }).layerId || "";
+        } else {
+          const existingEl = await ElementModel.findById(op.elementId);
+          targetLayerId = (op.payload as { layerId?: string }).layerId || existingEl?.layerId || "";
+        }
+
+        if (targetLayerId && board) {
+          const { locked, layerName } = isLayerLocked(board.layers, targetLayerId);
+          if (locked) {
+            rejectedOps.push({
+              elementId: op.elementId,
+              operation: op.operation,
+              layerName,
+              code: "LAYER_LOCKED"
+            });
+            continue;
+          }
+        }
+
+        if (op.operation === "create") {
           const el = await createElement(op.boardId, userId, role, op.payload);
           io.to(op.boardId).emit("element:created", el);
         }
 
         if (op.operation === "update") {
-          const board = await BoardModel.findById(op.boardId);
-          const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
-          const role = member?.role || "Viewer";
-
           const { element, accepted } = await updateElement(
             op.elementId,
             userId,
@@ -214,10 +289,6 @@ export const registerSocketHandlers = (
         }
 
         if (op.operation === "delete") {
-          const board = await BoardModel.findById(op.boardId);
-          const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
-          const role = member?.role || "Viewer";
-
           await deleteElement(op.elementId, userId, role);
           io.to(op.boardId).emit("element:deleted", { elementId: op.elementId });
         }
@@ -225,6 +296,11 @@ export const registerSocketHandlers = (
         console.error(`sync:operations error for op ${op.operation}:`, err);
       }
     }
+
+    if (rejectedOps.length > 0) {
+      socket.emit("layer:offline:rejected", { rejectedOps });
+    }
+
     socket.emit("sync:acknowledged");
   });
 

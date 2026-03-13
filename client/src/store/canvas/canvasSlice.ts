@@ -84,6 +84,19 @@ const canvasSlice = createSlice({
       });
     },
 
+    deleteElementsFromLayer: (state, action: PayloadAction<string>) => {
+      pushHistory(state);
+      const layerId = action.payload;
+      Object.keys(state.elements).forEach((id) => {
+        if (state.elements[id].layerId === layerId) {
+          delete state.elements[id];
+          if (state.selectedElementId === id) {
+            state.selectedElementId = null;
+          }
+        }
+      });
+    },
+
     updateMultipleElementsLocally: (state, action: PayloadAction<CanvasElement[]>) => {
       action.payload.forEach((el) => {
         state.elements[el._id] = el;
@@ -115,6 +128,7 @@ export const {
   deleteElementLocally,
   selectElement,
   setElements,
+  deleteElementsFromLayer,
   updateMultipleElementsLocally,
   undo,
   redo

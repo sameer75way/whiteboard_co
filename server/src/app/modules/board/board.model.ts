@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { layerSubSchema, type ILayer } from "../layer/layer.model";
 
 export type BoardRole = "Owner" | "Collaborator" | "Viewer";
 
@@ -13,6 +14,7 @@ export interface IBoard extends mongoose.Document {
   name: string;
   owner: mongoose.Types.ObjectId;
   members: BoardMember[];
+  layers: ILayer[];
   shareCode: string;
   isPublic: boolean;
 }
@@ -57,6 +59,11 @@ const boardSchema = new mongoose.Schema<IBoard>(
     },
 
     members: [boardMemberSchema],
+
+    layers: {
+      type: [layerSubSchema],
+      default: []
+    },
 
     shareCode: {
       type: String,

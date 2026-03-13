@@ -20,6 +20,7 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
   const selectedElementId = useSelector((state: RootState) => state.canvas.selectedElementId);
   const elements = useSelector((state: RootState) => state.canvas.elements);
   const selectedElement = selectedElementId ? elements[selectedElementId] : null;
+  const activeLayerId = useSelector((state: RootState) => state.layers.activeLayerId);
 
   const emitCreateElement = useCallback((element: CanvasElement) => {
     if (!boardId) return;
@@ -46,35 +47,62 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     }
   }, [boardId, dispatch]);
 
+  const getViewportCenter = useCallback((): { x: number; y: number } => {
+    const container = document.getElementById("whiteboard-container");
+    if (!container) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const stage = (window as any).__WBC_STAGE;
+    if (stage) {
+      const scale = stage.scaleX();
+      const position = stage.position();
+      return {
+        x: (centerX - position.x) / scale,
+        y: (centerY - position.y) / scale
+      };
+    }
+    
+    return { x: centerX, y: centerY };
+  }, []);
+
   const handleCreateRectangle = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createRectangleElement(boardId, x ?? 200, y ?? 200));
-  }, [boardId, emitCreateElement]);
+    const center = getViewportCenter();
+    emitCreateElement(createRectangleElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
   const handleCreateCircle = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createCircleElement(boardId, x ?? 250, y ?? 250));
-  }, [boardId, emitCreateElement]);
+    const center = getViewportCenter();
+    emitCreateElement(createCircleElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
   const handleCreateText = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createTextElement(boardId, x ?? 200, y ?? 200));
-  }, [boardId, emitCreateElement]);
+    const center = getViewportCenter();
+    emitCreateElement(createTextElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
   const handleCreateSticky = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createStickyNote(boardId, x ?? 200, y ?? 200));
-  }, [boardId, emitCreateElement]);
+    const center = getViewportCenter();
+    emitCreateElement(createStickyNote(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
   const handleCreateTriangle = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createTriangleElement(boardId, x ?? 250, y ?? 250));
-  }, [boardId, emitCreateElement]);
+    const center = getViewportCenter();
+    emitCreateElement(createTriangleElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
   const handleCreateLine = useCallback((x?: number, y?: number) => {
     if (!boardId) return;
-    emitCreateElement(createLineElement(boardId, x ?? 200, y ?? 300));
-  }, [boardId, emitCreateElement]);
+    const center = getViewportCenter();
+    emitCreateElement(createLineElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
   const handleDelete = useCallback(() => {
     if (!boardId || !selectedElementId) return;

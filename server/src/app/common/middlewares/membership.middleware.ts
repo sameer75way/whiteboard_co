@@ -9,7 +9,7 @@ export const isBoardMember = catchAsync(async (
   next: NextFunction
 ) => {
   const userId = req.user?.id;
-  const boardId = req.params.id || req.body.boardId;
+  const boardId = req.params.id || req.params.boardId || req.body.boardId;
 
   if (!boardId) {
     throw new AppError("Board ID is required", 400);

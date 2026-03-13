@@ -18,17 +18,21 @@ interface Props {
   element: Element;
   boardId: string;
   isViewer?: boolean;
+  isLayerLocked?: boolean;
   onEditText?: (elementId: string, currentText: string, pos: { x: number; y: number; width: number }) => void;
+  onContextMenu?: (elementId: string, mouseX: number, mouseY: number) => void;
 }
 
-export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props) => {
+export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEditText, onContextMenu }: Props) => {
   const dispatch = useDispatch();
   const userName = useSelector((state: RootState) => state.auth.user?.name) || "User";
   const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group | Konva.RegularPolygon | Konva.Line>(null);
   const lastCursorEmitRef = useRef<number>(0);
 
+  const isDisabled = isViewer || isLayerLocked;
+
   const broadcastUpdate = useCallback(async (updated: Element) => {
-    if (isViewer) return;
+    if (isDisabled) return;
     const lamportTs = nextLamport();
     const elementWithTs = { ...updated, lamportTs };
     dispatch(updateElement(elementWithTs));
@@ -48,10 +52,10 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         lamportTs
       });
     }
-  }, [boardId, element._id, element.boardId, element.version, dispatch, isViewer]);
+  }, [boardId, element._id, element.boardId, element.version, dispatch, isDisabled]);
 
   const handlePress = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-    if (isViewer) return;
+    if (isDisabled) return;
     Object.assign(e, { cancelBubble: true });
     const allElements = Object.values(store.getState().canvas.elements) as Element[];
     const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
@@ -63,7 +67,13 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
     dispatch(selectElement(element._id));
     const layer = e.currentTarget.getLayer();
     if (layer) layer.batchDraw();
-  }, [dispatch, element, broadcastUpdate, isViewer]);
+  }, [dispatch, element, broadcastUpdate, isDisabled]);
+
+  const handleRightClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
+    e.evt.preventDefault();
+    if (!onContextMenu) return;
+    onContextMenu(element._id, e.evt.clientX, e.evt.clientY);
+  }, [element._id, onContextMenu]);
 
   const handleDragStart = useCallback((e: KonvaEventObject<DragEvent>) => {
     Object.assign(e, { cancelBubble: true });
@@ -192,7 +202,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
   }, [boardId, element, userName]);
 
   const handleDblClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-    if (isViewer || !onEditText) return;
+    if (isDisabled || !onEditText) return;
     const stage = e.target.getStage();
     if (!stage) return;
     const textNode = e.target;
@@ -203,7 +213,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
       y: stageBox.top + absPos.y,
       width: (element.dimensions?.width || 200) * stage.scaleX()
     });
-  }, [onEditText, element._id, element.content, element.dimensions?.width, isViewer]);
+  }, [onEditText, element._id, element.content, element.dimensions?.width, isDisabled]);
 
   if (element.type === "rectangle") {
     return (
@@ -219,7 +229,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable={!isViewer}
+        draggable={!isDisabled}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -227,6 +237,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         onDragEnd={handleDragEnd}
         onTransform={handleTransform}
         onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
       />
     );
   }
@@ -244,7 +255,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable={!isViewer}
+        draggable={!isDisabled}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -252,6 +263,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         onDragEnd={handleDragEnd}
         onTransform={handleTransform}
         onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
       />
     );
   }
@@ -268,7 +280,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         fill={element.style.fill}
         width={element.dimensions.width}
         rotation={element.rotation || 0}
-        draggable={!isViewer}
+        draggable={!isDisabled}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDblClick={handleDblClick}
@@ -278,6 +290,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         onDragEnd={handleDragEnd}
         onTransform={handleTransform}
         onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
       />
     );
   }
@@ -292,7 +305,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         width={element.dimensions.width}
         height={element.dimensions.height}
         rotation={element.rotation || 0}
-        draggable={!isViewer}
+        draggable={!isDisabled}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -300,6 +313,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         onDragEnd={handleDragEnd}
         onTransform={handleTransform}
         onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
       >
         <Rect
           width={element.dimensions.width}
@@ -343,7 +357,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable={!isViewer}
+        draggable={!isDisabled}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -351,6 +365,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         onDragEnd={handleDragEnd}
         onTransform={handleTransform}
         onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
       />
     );
   }
@@ -367,7 +382,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable={!isViewer}
+        draggable={!isDisabled}
         hitStrokeWidth={Math.max(20, element.style.strokeWidth)}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
@@ -376,6 +391,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
         onDragEnd={handleDragEnd}
         onTransform={handleTransform}
         onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
       />
     );
   }

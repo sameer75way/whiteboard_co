@@ -10,11 +10,20 @@ export interface BoardMember {
   joinedAt?: string;
 }
 
+export interface Layer {
+  id: string;
+  name: string;
+  order: number;
+  isVisible: boolean;
+  isLocked: boolean;
+}
+
 export interface Board {
   _id: string;
   name: string;
   owner: string | { _id: string; name: string };
   members: BoardMember[];
+  layers: Layer[];
   shareCode: string;
   createdAt?: string;
   updatedAt?: string;

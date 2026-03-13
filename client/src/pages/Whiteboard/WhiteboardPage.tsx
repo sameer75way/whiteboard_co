@@ -7,9 +7,13 @@ import { CanvasBoard } from "./components/Canvas/CanvasBoard";
 import { Toolbar } from "./components/Toolbar/Toolbar";
 import { StylePanel } from "./components/Toolbar/StylePanel";
 import { ConnectionStatusBar } from "./components/Sync/ConnectionStatusBar";
+import { LayersPanel } from "./components/LayersPanel/index";
 import { setElements } from "../../store/canvas/canvasSlice";
+import { setLayers } from "../../store/layers/layersSlice";
+import { removeNotification } from "../../store/notifications/notificationsSlice";
 import { useGetBoardElementsQuery } from "../../services/api/elementApi";
 import { useGetBoardQuery } from "../../services/api/boardApi";
+import { useSnackbar } from "notistack";
 
 import { WhiteboardHeader } from "./components/layout/WhiteboardHeader";
 import { WhiteboardModals } from "./components/layout/WhiteboardModals";
@@ -34,11 +38,18 @@ export const WhiteboardPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const notifications = useSelector((state: RootState) => state.notifications.notifications);
+  const layerState = useSelector((state: RootState) => state.layers);
+  const { enqueueSnackbar } = useSnackbar();
 
   useOfflineSync();
 
+  const activeLayer = layerState.layers.find(l => l.id === layerState.activeLayerId);
+  const isLayerLocked = activeLayer?.isLocked || false;
+
   const [isAccessModalOpen, setAccessModalOpen] = useState(false);
   const [shareSnackbarOpen, setShareSnackbarOpen] = useState(false);
+  const [layersPanelOpen, setLayersPanelOpen] = useState(false);
 
   const { data: boardData, refetch: refetchBoard } = useGetBoardQuery(id!, { skip: !id });
   const board = boardData?.data;
@@ -50,6 +61,11 @@ export const WhiteboardPage = () => {
   
   const isViewer = currentMember?.role === "Viewer" || !currentMember;
   const isOwner = currentMember?.role === "Owner";
+  const userRole: "Owner" | "Collaborator" | "Viewer" = isOwner
+    ? "Owner"
+    : isViewer
+      ? "Viewer"
+      : "Collaborator";
 
   const {
     handleCreateRectangle,
@@ -77,7 +93,7 @@ export const WhiteboardPage = () => {
 
   const setupKeyboardShortcuts = useCallback(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (isViewer) return;
+      if (isViewer || isLayerLocked) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.ctrlKey && e.shiftKey && e.key === "Z") { computeStateDiffAndSync('redo'); return; }
       if (e.ctrlKey && e.key === "z") { computeStateDiffAndSync('undo'); return; }
@@ -87,7 +103,7 @@ export const WhiteboardPage = () => {
     window.addEventListener("keydown", handleKey);
     
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedElementId, handleDelete, computeStateDiffAndSync, isViewer]);
+  }, [selectedElementId, handleDelete, computeStateDiffAndSync, isViewer, isLayerLocked]);
 
   useEffect(() => {
     const cleanup = setupKeyboardShortcuts();
@@ -100,6 +116,20 @@ export const WhiteboardPage = () => {
       dispatch(setElements(elementsData.data));
     }
   }, [elementsData, dispatch]);
+
+  useEffect(() => {
+    if (board?.layers) {
+      dispatch(setLayers(board.layers));
+    }
+  }, [board?.layers, dispatch]);
+
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latest = notifications[notifications.length - 1];
+      enqueueSnackbar(latest.message, { variant: "warning", autoHideDuration: 4000 });
+      dispatch(removeNotification(latest.id));
+    }
+  }, [notifications, enqueueSnackbar, dispatch]);
 
   if (!id) return <div>Invalid board ID</div>;
 
@@ -124,12 +154,23 @@ export const WhiteboardPage = () => {
             onUndo={() => computeStateDiffAndSync('undo')}
             onRedo={() => computeStateDiffAndSync('redo')}
             hasSelection={!!selectedElementId}
+            onToggleLayers={() => setLayersPanelOpen(!layersPanelOpen)}
+            isLayersOpen={layersPanelOpen}
+            isLayerLocked={isLayerLocked}
           />
           {selectedElementId && <StylePanel boardId={id} />}
         </>
       )}
 
       <CanvasBoard boardId={id} isViewer={isViewer} />
+
+      {layersPanelOpen && (
+        <LayersPanel
+          boardId={id}
+          userRole={userRole}
+          onClose={() => setLayersPanelOpen(false)}
+        />
+      )}
 
       <ConnectionStatusBar />
 

@@ -22,6 +22,7 @@ interface JoinRequest {
 
 export const createBoard = async (userId: string, name: string) => {
   const shareCode = crypto.randomBytes(6).toString("hex");
+  const defaultLayerId = crypto.randomUUID();
 
   const board = await BoardModel.create({
     name,
@@ -31,6 +32,15 @@ export const createBoard = async (userId: string, name: string) => {
         user: new mongoose.Types.ObjectId(userId),
         role: "Owner",
         status: "Accepted"
+      }
+    ],
+    layers: [
+      {
+        id: defaultLayerId,
+        name: "Layer 1",
+        order: 0,
+        isVisible: true,
+        isLocked: false
       }
     ],
     shareCode

@@ -14,6 +14,10 @@ import {
 } from "../../../../store/canvas/canvasSlice";
 import { useWhiteboardCommands } from "../../hooks/useWhiteboardCommands";
 import { styled } from '@mui/material/styles';
+import type { CanvasElement as CanvasElementType } from "../../../../types/element.types";
+import type { Layer as LayerType } from "../../../../types/board.types";
+import { Menu, MenuItem, Typography } from "@mui/material";
+import { useMoveElementToLayerMutation } from "../../../../services/api/layerApi";
 
 const BoardContainer = styled('div')({
   width: "100%",
@@ -60,18 +64,35 @@ interface TextEditState {
   width: number;
 }
 
-export const CanvasBoard = ({ boardId, isViewer }: Props) => {
-  const dispatch = useDispatch();
-  const elements = useSelector((state: RootState) => state.canvas.elements);
-  const selectedElementId = useSelector((state: RootState) => state.canvas.selectedElementId);
-  const userName = useSelector((state: RootState) => state.auth.user?.name);
-  const [stageScale, setStageScale] = useState(1);
+interface ContextMenuState {
+  elementId: string;
+  mouseX: number;
+  mouseY: number;
+}
 
-  const elementList = useMemo(() => {
-    return Object.values(elements).sort((a, b) => {
-      if ((a.zIndex || 0) !== (b.zIndex || 0)) {
-        return (a.zIndex || 0) - (b.zIndex || 0);
-      }
+const buildLayerMap = (layers: LayerType[]): Record<string, LayerType> => {
+  const map: Record<string, LayerType> = {};
+  layers.forEach((l) => { map[l.id] = l; });
+  return map;
+};
+
+const filterAndSortElements = (
+  elements: Record<string, CanvasElementType>,
+  layers: LayerType[]
+): CanvasElementType[] => {
+  const layerMap = buildLayerMap(layers);
+
+  return Object.values(elements)
+    .filter((el) => {
+      if (!el.layerId) return true;
+      const layer = layerMap[el.layerId];
+      return !layer || layer.isVisible;
+    })
+    .sort((a, b) => {
+      const aLayerOrder = a.layerId ? (layerMap[a.layerId]?.order ?? 0) : 0;
+      const bLayerOrder = b.layerId ? (layerMap[b.layerId]?.order ?? 0) : 0;
+      if (aLayerOrder !== bLayerOrder) return aLayerOrder - bLayerOrder;
+      if ((a.zIndex || 0) !== (b.zIndex || 0)) return (a.zIndex || 0) - (b.zIndex || 0);
       const aSeq = a.lamportTs?.seq || 0;
       const bSeq = b.lamportTs?.seq || 0;
       if (aSeq !== bSeq) return aSeq - bSeq;
@@ -80,7 +101,30 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
       if (aClient !== bClient) return aClient.localeCompare(bClient);
       return a._id.localeCompare(b._id);
     });
-  }, [elements]);
+};
+
+const isElementInteractable = (
+  el: CanvasElementType,
+  layers: LayerType[]
+): boolean => {
+  if (!el.layerId) return true;
+  const layerMap = buildLayerMap(layers);
+  const layer = layerMap[el.layerId];
+  if (!layer) return true;
+  return layer.isVisible && !layer.isLocked;
+};
+
+export const CanvasBoard = ({ boardId, isViewer }: Props) => {
+  const dispatch = useDispatch();
+  const elements = useSelector((state: RootState) => state.canvas.elements);
+  const selectedElementId = useSelector((state: RootState) => state.canvas.selectedElementId);
+  const userName = useSelector((state: RootState) => state.auth.user?.name);
+  const layers = useSelector((state: RootState) => state.layers.layers);
+  const [stageScale, setStageScale] = useState(1);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [moveElementToLayerApi] = useMoveElementToLayerMutation();
+
+  const elementList = useMemo(() => filterAndSortElements(elements, layers), [elements, layers]);
 
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -111,6 +155,15 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
   useEffect(() => {
     updateTransformerNodes();
   }, [updateTransformerNodes]);
+
+  useEffect(() => {
+    if (stageRef.current) {
+      (window as any).__WBC_STAGE = stageRef.current;
+    }
+    return () => {
+      delete (window as any).__WBC_STAGE;
+    };
+  }, []);
 
   const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
     const stage = e.target.getStage();
@@ -249,6 +302,23 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
     }
   };
 
+  const handleContextMenu = useCallback((elementId: string, mouseX: number, mouseY: number) => {
+    setContextMenu({ elementId, mouseX, mouseY });
+  }, []);
+
+  const handleContextMenuClose = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleMoveToLayer = useCallback((layerId: string) => {
+    if (!contextMenu) return;
+    moveElementToLayerApi({ boardId, elementId: contextMenu.elementId, newLayerId: layerId });
+    setContextMenu(null);
+  }, [contextMenu, boardId, moveElementToLayerApi]);
+
+  const contextMenuElement = contextMenu ? elements[contextMenu.elementId] : null;
+  const otherLayers = layers.filter((l) => l.id !== contextMenuElement?.layerId);
+
   return (
     <BoardContainer
       onDragOver={(e) => e.preventDefault()}
@@ -281,7 +351,9 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
               element={el}
               boardId={boardId}
               isViewer={isViewer}
+              isLayerLocked={!isElementInteractable(el, layers)}
               onEditText={handleEditText}
+              onContextMenu={handleContextMenu}
             />
           ))}
           <CollaboratorCursors currentScale={stageScale} />
@@ -319,6 +391,30 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
           inputwidth={textEdit.width}
         />
       )}
+
+      <Menu
+        open={contextMenu !== null}
+        onClose={handleContextMenuClose}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined
+        }
+      >
+        <Typography variant="caption" sx={{ px: 2, py: 0.5, color: "text.secondary", display: "block" }}>
+          Move to layer
+        </Typography>
+        {otherLayers.map((layer) => (
+          <MenuItem
+            key={layer.id}
+            onClick={() => handleMoveToLayer(layer.id)}
+          >
+            {layer.name}
+          </MenuItem>
+        ))}
+        {otherLayers.length === 0 && (
+          <MenuItem disabled>No other layers</MenuItem>
+        )}
+      </Menu>
     </BoardContainer>
   );
 };

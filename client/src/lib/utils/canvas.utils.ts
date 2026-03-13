@@ -7,7 +7,8 @@ export const generateId = (): string => {
 export const createRectangleElement = (
   boardId: string,
   x: number,
-  y: number
+  y: number,
+  layerId?: string
 ): CanvasElement => {
   return {
     _id: generateId(),
@@ -26,14 +27,16 @@ export const createRectangleElement = (
       opacity: 1
     },
     version: 1,
-    zIndex: 0 
+    zIndex: 0,
+    layerId
   };
 };
 
 export const createTextElement = (
   boardId: string,
   x: number,
-  y: number
+  y: number,
+  layerId?: string
 ): CanvasElement => {
   return {
     _id: generateId(),
@@ -52,14 +55,16 @@ export const createTextElement = (
       opacity: 1
     },
     version: 1,
-    zIndex: 0 
+    zIndex: 0,
+    layerId
   };
 };
 
 export const createStickyNote = (
   boardId: string,
   x: number,
-  y: number
+  y: number,
+  layerId?: string
 ): CanvasElement => {
   return {
     _id: generateId(),
@@ -78,14 +83,16 @@ export const createStickyNote = (
       opacity: 1
     },
     version: 1,
-    zIndex: 0 
+    zIndex: 0,
+    layerId
   };
 };
 
 export const createCircleElement = (
   boardId: string,
   x: number,
-  y: number
+  y: number,
+  layerId?: string
 ): CanvasElement => {
   return {
     _id: generateId(),
@@ -104,14 +111,16 @@ export const createCircleElement = (
       opacity: 1
     },
     version: 1,
-    zIndex: 0
+    zIndex: 0,
+    layerId
   };
 };
 
 export const createTriangleElement = (
   boardId: string,
   x: number,
-  y: number
+  y: number,
+  layerId?: string
 ): CanvasElement => {
   return {
     _id: generateId(),
@@ -130,14 +139,16 @@ export const createTriangleElement = (
       opacity: 1
     },
     version: 1,
-    zIndex: 0
+    zIndex: 0,
+    layerId
   };
 };
 
 export const createLineElement = (
   boardId: string,
   x: number,
-  y: number
+  y: number,
+  layerId?: string
 ): CanvasElement => {
   return {
     _id: generateId(),
@@ -157,6 +168,7 @@ export const createLineElement = (
       opacity: 1
     },
     version: 1,
-    zIndex: 0
+    zIndex: 0,
+    layerId
   };
 };

@@ -21,12 +21,16 @@ interface Props {
   onUndo: () => void;
   onRedo: () => void;
   hasSelection: boolean;
+  onToggleLayers: () => void;
+  isLayersOpen: boolean;
+  isLayerLocked?: boolean;
 }
 
 const StyledIconButton = styled(IconButton, {
-  shouldForwardProp: (prop) => prop !== "danger"
-})<{ danger?: boolean }>(({ danger }) => ({
-  color: danger ? "#ef4444" : "rgba(255,255,255,0.85)",
+  shouldForwardProp: (prop) => prop !== "danger" && prop !== "activeItem"
+})<{ danger?: boolean; activeItem?: boolean }>(({ danger, activeItem }) => ({
+  color: activeItem ? "#6366f1" : (danger ? "#ef4444" : "rgba(255,255,255,0.85)"),
+  background: activeItem ? "rgba(99,102,241,0.25)" : "transparent",
   borderRadius: "10px",
   transition: "all 0.2s ease",
   "&:hover": {
@@ -70,6 +74,7 @@ const ToolBtn = ({
   children,
   disabled = false,
   danger = false,
+  activeItem = false,
   toolType,
 }: {
   title: string;
@@ -77,6 +82,7 @@ const ToolBtn = ({
   children: React.ReactNode;
   disabled?: boolean;
   danger?: boolean;
+  activeItem?: boolean;
   toolType?: string;
 }) => {
   const handleDragStart = (e: React.DragEvent) => {
@@ -118,10 +124,11 @@ const ToolBtn = ({
     <Tooltip title={title} placement="right" arrow>
       <span>
         <StyledIconButton
-          onClick={onClick}
+          onClick={() => onClick()}
           disabled={disabled}
           size="medium"
           danger={danger}
+          activeItem={activeItem}
           draggable={!!toolType}
           onDragStart={handleDragStart}
         >
@@ -131,6 +138,8 @@ const ToolBtn = ({
     </Tooltip>
   );
 };
+
+import LayersIcon from "@mui/icons-material/Layers";
 
 export const Toolbar = ({
   onRectangle,
@@ -143,38 +152,51 @@ export const Toolbar = ({
   onUndo,
   onRedo,
   hasSelection,
+  onToggleLayers,
+  isLayersOpen,
+  isLayerLocked = false,
 }: Props) => {
   return (
     <ToolbarContainer>
-      <ToolBtn title="Rectangle (R)" onClick={onRectangle} toolType="rectangle">
+      <ToolBtn title="Rectangle (R)" onClick={onRectangle} toolType="rectangle" disabled={isLayerLocked}>
         <RectangleOutlinedIcon fontSize="small" />
       </ToolBtn>
-      <ToolBtn title="Circle (C)" onClick={onCircle} toolType="circle">
+      <ToolBtn title="Circle (C)" onClick={onCircle} toolType="circle" disabled={isLayerLocked}>
         <CircleOutlinedIcon fontSize="small" />
       </ToolBtn>
-      <ToolBtn title="Triangle" onClick={onTriangle} toolType="triangle">
+      <ToolBtn title="Triangle" onClick={onTriangle} toolType="triangle" disabled={isLayerLocked}>
         <ChangeHistoryIcon fontSize="small" />
       </ToolBtn>
-      <ToolBtn title="Line" onClick={onLine} toolType="line">
+      <ToolBtn title="Line" onClick={onLine} toolType="line" disabled={isLayerLocked}>
         <HorizontalRuleIcon fontSize="small" />
       </ToolBtn>
-      <ToolBtn title="Text (T)" onClick={onText} toolType="text">
+      <ToolBtn title="Text (T)" onClick={onText} toolType="text" disabled={isLayerLocked}>
         <TextFieldsIcon fontSize="small" />
       </ToolBtn>
-      <ToolBtn title="Sticky Note" onClick={onSticky} toolType="sticky">
+      <ToolBtn title="Sticky Note" onClick={onSticky} toolType="sticky" disabled={isLayerLocked}>
         <StickyNote2OutlinedIcon fontSize="small" />
       </ToolBtn>
 
       <StyledDivider />
 
-      <ToolBtn title="Delete (Del)" onClick={onDelete} disabled={!hasSelection} danger>
+      <ToolBtn title="Delete (Del)" onClick={onDelete} disabled={!hasSelection || isLayerLocked} danger>
         <DeleteOutlineIcon fontSize="small" />
       </ToolBtn>
-      <ToolBtn title="Undo (Ctrl+Z)" onClick={onUndo}>
+      <ToolBtn title="Undo (Ctrl+Z)" onClick={onUndo} disabled={isLayerLocked}>
         <UndoIcon fontSize="small" />
       </ToolBtn>
-      <ToolBtn title="Redo (Ctrl+Shift+Z)" onClick={onRedo}>
+      <ToolBtn title="Redo (Ctrl+Shift+Z)" onClick={onRedo} disabled={isLayerLocked}>
         <RedoIcon fontSize="small" />
+      </ToolBtn>
+
+      <StyledDivider />
+
+      <ToolBtn 
+        title="Layers" 
+        onClick={onToggleLayers} 
+        activeItem={isLayersOpen}
+      >
+        <LayersIcon fontSize="small" />
       </ToolBtn>
     </ToolbarContainer>
   );
