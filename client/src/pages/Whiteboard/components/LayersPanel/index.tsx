@@ -213,7 +213,7 @@ const SortableLayerRow = ({
   });
 
   const canEdit = userRole === "Owner" || userRole === "Collaborator";
-  const canLock = userRole === "Owner" || userRole === "Collaborator";
+  const canLock = userRole === "Owner";
 
   const style = {
     transform: CSS.Transform.toString(transform),
