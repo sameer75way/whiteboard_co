@@ -8,6 +8,8 @@ import StickyNote2OutlinedIcon from "@mui/icons-material/StickyNote2Outlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
+import HistoryIcon from "@mui/icons-material/History";
+import SaveIcon from "@mui/icons-material/Save";
 import { styled } from "@mui/material/styles";
 
 interface Props {
@@ -24,6 +26,9 @@ interface Props {
   onToggleLayers: () => void;
   isLayersOpen: boolean;
   isLayerLocked?: boolean;
+  onToggleHistory: () => void;
+  isHistoryOpen: boolean;
+  onSaveVersion: () => void;
 }
 
 const StyledIconButton = styled(IconButton, {
@@ -155,6 +160,9 @@ export const Toolbar = ({
   onToggleLayers,
   isLayersOpen,
   isLayerLocked = false,
+  onToggleHistory,
+  isHistoryOpen,
+  onSaveVersion,
 }: Props) => {
   return (
     <ToolbarContainer>
@@ -197,6 +205,19 @@ export const Toolbar = ({
         activeItem={isLayersOpen}
       >
         <LayersIcon fontSize="small" />
+      </ToolBtn>
+      <ToolBtn
+        title="Version History"
+        onClick={onToggleHistory}
+        activeItem={isHistoryOpen}
+      >
+        <HistoryIcon fontSize="small" />
+      </ToolBtn>
+      <ToolBtn
+        title="Save Version"
+        onClick={onSaveVersion}
+      >
+        <SaveIcon fontSize="small" />
       </ToolBtn>
     </ToolbarContainer>
   );

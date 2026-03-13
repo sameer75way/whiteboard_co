@@ -3,7 +3,7 @@ import TextField from '@mui/material/TextField';
 import type { TextFieldProps } from '@mui/material/TextField';
 
 const StyledTextField = styled(TextField)<TextFieldProps>(({ theme }) => ({
-  marginTop: '1.25rem', // Make room for the top label
+  marginTop: '1.25rem',
   '& .MuiInputLabel-root': {
     transform: 'translate(0, -1.25rem) scale(0.85)',
     transformOrigin: 'top left',

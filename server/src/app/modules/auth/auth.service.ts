@@ -143,11 +143,16 @@ export const refreshAuthTokens = async (refreshToken: string) => {
   storedToken.isRevoked = true;
   await storedToken.save();
 
-  const newAccessToken = signAccessToken({ id: decoded.id });
-  const newRefreshToken = signRefreshToken({ id: decoded.id });
+  const user = await UserModel.findById(decoded.id);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const newAccessToken = signAccessToken({ id: user._id, role: user.role });
+  const newRefreshToken = signRefreshToken({ id: user._id });
 
   await RefreshTokenModel.create({
-    userId: decoded.id,
+    userId: user._id,
     token: newRefreshToken,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   });

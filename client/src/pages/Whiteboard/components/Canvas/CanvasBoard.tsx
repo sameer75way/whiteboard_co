@@ -24,6 +24,15 @@ const BoardContainer = styled('div')({
   height: "100%"
 });
 
+const ContextMenuLabel = styled(Typography)({
+  paddingLeft: 16,
+  paddingRight: 16,
+  paddingTop: 4,
+  paddingBottom: 4,
+  color: "text.secondary",
+  display: "block"
+});
+
 const StyledStage = styled(Stage)<{ ispanmode: number }>(({ ispanmode }) => ({
   cursor: ispanmode ? 'grab' : 'default'
 }));
@@ -54,6 +63,9 @@ const EditTextArea = styled('textarea')<{
 interface Props {
   boardId: string;
   isViewer?: boolean;
+  readOnly?: boolean;
+  previewElements?: CanvasElementType[];
+  previewLayers?: LayerType[];
 }
 
 interface TextEditState {
@@ -114,12 +126,17 @@ const isElementInteractable = (
   return layer.isVisible && !layer.isLocked;
 };
 
-export const CanvasBoard = ({ boardId, isViewer }: Props) => {
+export const CanvasBoard = ({ boardId, isViewer, readOnly = false, previewElements, previewLayers }: Props) => {
   const dispatch = useDispatch();
-  const elements = useSelector((state: RootState) => state.canvas.elements);
+  const storeElements = useSelector((state: RootState) => state.canvas.elements);
   const selectedElementId = useSelector((state: RootState) => state.canvas.selectedElementId);
   const userName = useSelector((state: RootState) => state.auth.user?.name);
-  const layers = useSelector((state: RootState) => state.layers.layers);
+  const storeLayers = useSelector((state: RootState) => state.layers.layers);
+
+  const elements = previewElements
+    ? previewElements.reduce<Record<string, CanvasElementType>>((acc, el) => { acc[el._id] = el; return acc; }, {})
+    : storeElements;
+  const layers = previewLayers ?? storeLayers;
   const [stageScale, setStageScale] = useState(1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [moveElementToLayerApi] = useMoveElementToLayerMutation();
@@ -158,14 +175,15 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
 
   useEffect(() => {
     if (stageRef.current) {
-      (window as any).__WBC_STAGE = stageRef.current;
+      window.__WBC_STAGE = stageRef.current;
     }
     return () => {
-      delete (window as any).__WBC_STAGE;
+      delete window.__WBC_STAGE;
     };
   }, []);
 
   const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
+    if (readOnly) return;
     const stage = e.target.getStage();
     if (!stage) return;
     const now = Date.now();
@@ -176,7 +194,7 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
     const transform = stage.getAbsoluteTransform().copy().invert();
     const worldPos = transform.point(pointer);
     socket.emit("cursor:move", { boardId, x: worldPos.x, y: worldPos.y, name: userName });
-  }, [boardId, userName]);
+  }, [boardId, userName, readOnly]);
 
   const handleWheel = useCallback((e: KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
@@ -209,12 +227,12 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
   }, []);
 
   const handleStageMouseDown = useCallback((e: KonvaEventObject<MouseEvent>) => {
-    if (isViewer) return;
+    if (isViewer || readOnly) return;
     const clickedOnEmpty = e.target === e.target.getStage();
     if (clickedOnEmpty) {
       dispatch(selectElement(null));
     }
-  }, [dispatch, isViewer]);
+  }, [dispatch, isViewer, readOnly]);
 
   const [isPanMode, setIsPanMode] = useState(false);
   const setupPanListeners = useCallback(() => {
@@ -280,7 +298,7 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (isViewer) return;
+    if (isViewer || readOnly) return;
     const toolType = e.dataTransfer.getData("application/react-whiteboard-tool");
     if (!toolType || !stageRef.current) return;
     stageRef.current.setPointersPositions(e);
@@ -328,11 +346,11 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
         ref={stageRef}
         width={window.innerWidth}
         height={window.innerHeight}
-        draggable={!selectedElementId || isPanMode}
-        ispanmode={isPanMode ? 1 : 0}
-        onMouseMove={handleMouseMove}
+        draggable={readOnly || (!selectedElementId || isPanMode)}
+        ispanmode={isPanMode || readOnly ? 1 : 0}
+        onMouseMove={readOnly ? undefined : handleMouseMove}
         onWheel={handleWheel}
-        onMouseDown={handleStageMouseDown}
+        onMouseDown={readOnly ? undefined : handleStageMouseDown}
         onDragMove={(e) => {
           if (e.target === e.target.getStage()) {
             const stage = e.target.getStage();
@@ -351,13 +369,13 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
               element={el}
               boardId={boardId}
               isViewer={isViewer}
-              isLayerLocked={!isElementInteractable(el, layers)}
-              onEditText={handleEditText}
-              onContextMenu={handleContextMenu}
+              isLayerLocked={readOnly || !isElementInteractable(el, layers)}
+              onEditText={readOnly ? () => {} : handleEditText}
+              onContextMenu={readOnly ? () => {} : handleContextMenu}
             />
           ))}
-          <CollaboratorCursors currentScale={stageScale} />
-          {!isViewer && (
+          {!readOnly && <CollaboratorCursors currentScale={stageScale} />}
+          {!isViewer && !readOnly && (
             <Transformer
               ref={transformerRef}
               rotateEnabled
@@ -400,9 +418,9 @@ export const CanvasBoard = ({ boardId, isViewer }: Props) => {
           contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined
         }
       >
-        <Typography variant="caption" sx={{ px: 2, py: 0.5, color: "text.secondary", display: "block" }}>
+        <ContextMenuLabel variant="caption">
           Move to layer
-        </Typography>
+        </ContextMenuLabel>
         {otherLayers.map((layer) => (
           <MenuItem
             key={layer.id}

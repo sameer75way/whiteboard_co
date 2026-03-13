@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { theme } from "./lib/theme/theme";
+import { SnackbarProvider } from "notistack";
 
 import { Provider } from "react-redux";
 
@@ -21,7 +22,9 @@ ReactDOM.createRoot(
         <PersistGate loading={null} persistor={persistor}>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            <AppRouter />
+            <SnackbarProvider maxSnack={3}>
+              <AppRouter />
+            </SnackbarProvider>
           </ThemeProvider>
         </PersistGate>
       </Provider>

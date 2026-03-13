@@ -1,4 +1,7 @@
 import { useCallback, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useSelector, useDispatch } from "react-redux";
 import {
   DndContext,
@@ -78,6 +81,48 @@ const HeaderActions = styled(Box)({
   gap: 2
 });
 
+const DragHandleWrapper = styled(Box)({
+  cursor: "grab",
+  display: "flex"
+});
+
+const StyledDragHandleIcon = styled(DragHandleIcon)({
+  fontSize: 16,
+  color: "rgba(255,255,255,0.3)"
+});
+
+const StyledVisibilityIcon = styled(VisibilityIcon)({ fontSize: 16 });
+const StyledVisibilityOffIcon = styled(VisibilityOffIcon)({ fontSize: 16 });
+
+const StyledLockIcon = styled(LockIcon)({
+  fontSize: 16,
+  color: "#f59e0b"
+});
+
+const StyledLockOpenIcon = styled(LockOpenIcon)({ fontSize: 16 });
+
+const StyledDeleteIcon = styled(DeleteOutlineIcon)({ fontSize: 16 });
+
+
+
+const StyledAddIcon = styled(AddIcon)({ fontSize: 18 });
+const StyledCloseIcon = styled(CloseIcon)({ fontSize: 18 });
+
+const PanelTitle = styled(Typography)({
+  fontSize: 14,
+  fontWeight: 600,
+  color: "rgba(255,255,255,0.9)"
+});
+
+const EditableLayerNameInput = styled(TextField)({
+  flex: 1,
+  "& .MuiInputBase-input": {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.85)",
+    padding: "2px 4px"
+  }
+});
+
 const LayerRowContainer = styled(Box, {
   shouldForwardProp: (prop) => prop !== "isActive"
 })<{ isActive: boolean }>(({ isActive }) => ({
@@ -101,6 +146,10 @@ const SmallIconButton = styled(IconButton)({
   "&:hover": {
     color: "rgba(255,255,255,0.9)"
   }
+});
+
+const DeleteIconButton = styled(SmallIconButton)({
+  "&:hover": { color: "#ef4444" }
 });
 
 const LayerName = styled(Typography)({
@@ -147,9 +196,16 @@ const SortableLayerRow = ({
   } = useSortable({ id: layer.id, disabled: userRole === "Viewer" });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(layer.name);
   const [updateLayerApi] = useUpdateLayerMutation();
   const [deleteLayerApi] = useDeleteLayerMutation();
+
+  const editSchema = z.object({ name: z.string().min(1) });
+  type EditForm = z.infer<typeof editSchema>;
+  
+  const { control: editControl, handleSubmit: handleEditSubmit, reset: resetEditForm } = useForm<EditForm>({
+    resolver: zodResolver(editSchema),
+    defaultValues: { name: layer.name }
+  });
 
   const canEdit = userRole === "Owner" || userRole === "Collaborator";
   const canLock = userRole === "Owner" || userRole === "Collaborator";
@@ -163,17 +219,19 @@ const SortableLayerRow = ({
 
   const handleDoubleClick = useCallback(() => {
     if (!canEdit) return;
-    setEditName(layer.name);
+    resetEditForm({ name: layer.name });
     setIsEditing(true);
-  }, [layer.name, canEdit]);
+  }, [layer.name, canEdit, resetEditForm]);
 
-  const handleRenameComplete = useCallback(() => {
+  const onEditSubmit = (data: EditForm) => {
     setIsEditing(false);
-    const trimmed = editName.trim();
+    const trimmed = data.name.trim();
     if (trimmed && trimmed !== layer.name) {
       updateLayerApi({ boardId, layerId: layer.id, name: trimmed });
     }
-  }, [editName, layer.name, layer.id, boardId, updateLayerApi]);
+  };
+
+  const handleCancelEdit = () => setIsEditing(false);
 
   const handleToggleVisibility = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -193,37 +251,34 @@ const SortableLayerRow = ({
   const renderDragHandle = () => {
     if (userRole === "Viewer") return null;
     return (
-      <Box {...attributes} {...listeners} sx={{ cursor: "grab", display: "flex" }}>
-        <DragHandleIcon sx={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }} />
-      </Box>
+      <DragHandleWrapper {...attributes} {...listeners}>
+        <StyledDragHandleIcon />
+      </DragHandleWrapper>
     );
   };
 
   const renderNameSection = () => {
     if (isEditing) {
       return (
-        <TextField
-          size="small"
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-          onBlur={handleRenameComplete}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleRenameComplete();
-            if (e.key === "Escape") setIsEditing(false);
-          }}
-          autoFocus
-          variant="standard"
-          slotProps={{
-            input: {
-              sx: {
-                fontSize: 13,
-                color: "rgba(255,255,255,0.85)",
-                padding: "2px 4px"
-              }
-            }
-          }}
-          sx={{ flex: 1 }}
-        />
+        <form onSubmit={handleEditSubmit(onEditSubmit)} style={{ flex: 1, display: "flex" }}>
+          <Controller
+            name="name"
+            control={editControl}
+            render={({ field }) => (
+              <EditableLayerNameInput
+                {...field}
+                size="small"
+                onBlur={() => handleEditSubmit(onEditSubmit)()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleEditSubmit(onEditSubmit)();
+                  if (e.key === "Escape") handleCancelEdit();
+                }}
+                autoFocus
+                variant="standard"
+              />
+            )}
+          />
+        </form>
       );
     }
 
@@ -238,8 +293,8 @@ const SortableLayerRow = ({
     <Tooltip title={layer.isVisible ? "Hide layer" : "Show layer"} arrow>
       <SmallIconButton onClick={handleToggleVisibility} size="small">
         {layer.isVisible
-          ? <VisibilityIcon sx={{ fontSize: 16 }} />
-          : <VisibilityOffIcon sx={{ fontSize: 16 }} />
+          ? <StyledVisibilityIcon />
+          : <StyledVisibilityOffIcon />
         }
       </SmallIconButton>
     </Tooltip>
@@ -255,8 +310,8 @@ const SortableLayerRow = ({
       <Tooltip title={layer.isLocked ? "Unlock layer" : "Lock layer"} arrow>
         <SmallIconButton onClick={handleToggleLock} size="small">
           {layer.isLocked
-            ? <LockIcon sx={{ fontSize: 16, color: "#f59e0b" }} />
-            : <LockOpenIcon sx={{ fontSize: 16 }} />
+            ? <StyledLockIcon />
+            : <StyledLockOpenIcon />
           }
         </SmallIconButton>
       </Tooltip>
@@ -269,14 +324,13 @@ const SortableLayerRow = ({
     return (
       <Tooltip title={isLast ? "Cannot delete last layer" : "Delete layer"} arrow>
         <span>
-          <SmallIconButton
+          <DeleteIconButton
             onClick={handleDelete}
             size="small"
             disabled={isLast}
-            sx={{ "&:hover": { color: "#ef4444" } }}
           >
-            <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-          </SmallIconButton>
+            <StyledDeleteIcon />
+          </DeleteIconButton>
         </span>
       </Tooltip>
     );
@@ -367,13 +421,13 @@ export const LayersPanel = ({ boardId, userRole, onClose }: LayersPanelProps) =>
         {canEdit && (
           <Tooltip title="Add layer" arrow>
             <SmallIconButton onClick={handleAddLayer} size="small">
-              <AddIcon sx={{ fontSize: 18 }} />
+              <StyledAddIcon />
             </SmallIconButton>
           </Tooltip>
         )}
         <Tooltip title="Close" arrow>
           <SmallIconButton onClick={onClose} size="small">
-            <CloseIcon sx={{ fontSize: 18 }} />
+            <StyledCloseIcon />
           </SmallIconButton>
         </Tooltip>
       </HeaderActions>
@@ -383,9 +437,9 @@ export const LayersPanel = ({ boardId, userRole, onClose }: LayersPanelProps) =>
   return (
     <PanelContainer>
       <PanelHeader>
-        <Typography sx={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
+        <PanelTitle>
           Layers
-        </Typography>
+        </PanelTitle>
         {renderHeaderActions()}
       </PanelHeader>
 

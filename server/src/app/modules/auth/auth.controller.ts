@@ -12,7 +12,8 @@ export const registerController = catchAsync(async (req: Request, res: Response)
 
   res.cookie("refreshToken", data.refreshToken, {
     httpOnly: true,
-    sameSite: "strict"
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   return successResponse(res, "User registered", {
@@ -31,7 +32,8 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
 
   res.cookie("refreshToken", data.refreshToken, {
     httpOnly: true,
-    sameSite: "strict"
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   return successResponse(res, "Login successful", {
@@ -67,7 +69,8 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
 
   res.cookie("refreshToken", data.refreshToken, {
     httpOnly: true,
-    sameSite: "strict"
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   return successResponse(res, "Password reset successful", {
@@ -96,7 +99,8 @@ export const refreshController = catchAsync(async (req: Request, res: Response) 
 
   res.cookie("refreshToken", newRefreshToken, {
     httpOnly: true,
-    sameSite: "strict"
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   return successResponse(res, "Token refreshed", { accessToken: newAccessToken });

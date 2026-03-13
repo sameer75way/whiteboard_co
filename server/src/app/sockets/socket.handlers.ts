@@ -5,6 +5,7 @@ import { IElement, LamportTimestamp } from "../modules/element/element.model";
 import { BoardModel } from "../modules/board/board.model";
 import { ElementModel } from "../modules/element/element.model";
 import type { ILayer } from "../modules/layer/layer.model";
+import { takeSnapshot, getCurrentBoardState } from "../modules/snapshot/snapshot.service";
 
 
 interface JoinBoardPayload {
@@ -53,6 +54,56 @@ const isLayerLocked = (layers: ILayer[], layerId: string): { locked: boolean; la
   return { locked: layer.isLocked, layerName: layer.name };
 };
 
+const boardDirtyMap = new Map<string, boolean>();
+const boardIntervalMap = new Map<string, ReturnType<typeof setInterval>>();
+
+const markBoardDirty = (boardId: string): void => {
+  boardDirtyMap.set(boardId, true);
+};
+
+const startAutoSaveInterval = (io: Server, boardId: string): void => {
+  if (boardIntervalMap.has(boardId)) return;
+
+  const interval = setInterval(async () => {
+    if (!boardDirtyMap.get(boardId)) return;
+    boardDirtyMap.set(boardId, false);
+
+    try {
+      const state = await getCurrentBoardState(boardId);
+      const snap = await takeSnapshot({
+        boardId,
+        type: "auto",
+        name: `Auto-save ${new Date().toISOString()}`,
+        state,
+        createdBy: `system:${boardId}`
+      });
+
+      io.to(boardId).emit("snapshot:saved", {
+        snapshotId: snap._id.toString(),
+        name: snap.name,
+        type: "auto",
+        savedAt: snap.createdAt.toISOString()
+      });
+    } catch (err) {
+      console.error(`Auto-save failed for board ${boardId}:`, err);
+    }
+  }, 30000);
+
+  boardIntervalMap.set(boardId, interval);
+};
+
+const stopAutoSaveInterval = async (io: Server, boardId: string): Promise<void> => {
+  const sockets = await io.in(boardId).fetchSockets();
+  if (sockets.length === 0) {
+    const interval = boardIntervalMap.get(boardId);
+    if (interval) {
+      clearInterval(interval);
+      boardIntervalMap.delete(boardId);
+    }
+    boardDirtyMap.delete(boardId);
+  }
+};
+
 export const registerSocketHandlers = (
   io: Server,
   socket: Socket
@@ -93,6 +144,8 @@ export const registerSocketHandlers = (
     activeBoards.add(boardId);
     io.to(boardId).emit("user:joined", { userId });
     await broadcastPresence(boardId);
+
+    startAutoSaveInterval(io, boardId);
   });
 
   socket.on("board:leave", async (data: JoinBoardPayload) => {
@@ -101,6 +154,7 @@ export const registerSocketHandlers = (
     activeBoards.delete(boardId);
     io.to(boardId).emit("user:left", { userId });
     await broadcastPresence(boardId);
+    await stopAutoSaveInterval(io, boardId);
   });
 
   socket.on("board:request_presence", async (data: { boardId: string }) => {
@@ -110,6 +164,7 @@ export const registerSocketHandlers = (
   socket.on("disconnect", async () => {
     for (const boardId of activeBoards) {
       await broadcastPresence(boardId);
+      await stopAutoSaveInterval(io, boardId);
     }
     activeBoards.clear();
   });
@@ -144,6 +199,7 @@ export const registerSocketHandlers = (
         member?.role || "Viewer",
         element as Partial<IElement>
       );
+      markBoardDirty(boardId);
       io.to(boardId).emit("element:created", newElement);
     } catch (error) {
       console.error("Socket create element error:", error);
@@ -183,14 +239,17 @@ export const registerSocketHandlers = (
         lamportTs
       );
 
+      markBoardDirty(boardId);
+
       if (accepted) {
         socket.to(boardId).emit("element:updated", element);
       } else {
         socket.emit("element:updated", element);
         console.log(`[CRDT] Stale update for ${elementId} — sent authoritative state to sender`);
       }
-    } catch (error: any) {
-      if (error?.statusCode === 404) {
+    } catch (error: unknown) {
+      const err = error as { statusCode?: number };
+      if (err?.statusCode === 404) {
         console.warn(`Socket update element ignored: Element ${data.elementId} not found (might be deleted or not yet created)`);
       } else {
         console.error("Socket update element error:", error);
@@ -223,6 +282,7 @@ export const registerSocketHandlers = (
       }
 
       await deleteElement(elementId, userId, member?.role || "Viewer");
+      markBoardDirty(boardId);
       socket.to(boardId).emit("element:deleted", { elementId });
     } catch (error) {
       console.error("Socket delete element error:", error);
@@ -270,6 +330,7 @@ export const registerSocketHandlers = (
 
         if (op.operation === "create") {
           const el = await createElement(op.boardId, userId, role, op.payload);
+          markBoardDirty(op.boardId);
           io.to(op.boardId).emit("element:created", el);
         }
 
@@ -281,6 +342,7 @@ export const registerSocketHandlers = (
             op.payload,
             op.lamportTs
           );
+          markBoardDirty(op.boardId);
           if (accepted) {
             io.to(op.boardId).emit("element:updated", element);
           } else {
@@ -290,6 +352,7 @@ export const registerSocketHandlers = (
 
         if (op.operation === "delete") {
           await deleteElement(op.elementId, userId, role);
+          markBoardDirty(op.boardId);
           io.to(op.boardId).emit("element:deleted", { elementId: op.elementId });
         }
       } catch (err) {

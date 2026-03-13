@@ -8,6 +8,7 @@ import canvasReducer from "./canvas/canvasSlice";
 import collabReducer from "./collaboration/collabSlice";
 import layersReducer from "./layers/layersSlice";
 import notificationsReducer from "./notifications/notificationsSlice";
+import snapshotReducer from "./snapshot/snapshotSlice";
 
 import { baseApi } from "../services/api/baseApi";
 
@@ -27,6 +28,7 @@ export const store = configureStore({
     sync: syncReducer,
     layers: layersReducer,
     notifications: notificationsReducer,
+    snapshot: snapshotReducer,
     [baseApi.reducerPath]: baseApi.reducer
   },
   middleware: (getDefaultMiddleware) =>

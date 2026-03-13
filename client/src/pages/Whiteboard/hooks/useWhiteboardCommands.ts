@@ -14,6 +14,13 @@ import { socket } from "../../../services/socket/socketClient";
 import { db } from "../../../services/offline/offlineDB";
 import { nextLamport } from "../../../lib/utils/crdt";
 import type { CanvasElement } from "../../../types/element.types";
+import type { Stage } from "konva/lib/Stage";
+
+declare global {
+  interface Window {
+    __WBC_STAGE?: Stage;
+  }
+}
 
 export const useWhiteboardCommands = (boardId: string | undefined) => {
   const dispatch = useDispatch();
@@ -55,7 +62,7 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
-    const stage = (window as any).__WBC_STAGE;
+    const stage = window.__WBC_STAGE;
     if (stage) {
       const scale = stage.scaleX();
       const position = stage.position();
