@@ -80,6 +80,30 @@ interface LayerOfflineRejectedPayload {
   }[];
 }
 
+import {
+  appendComment,
+  appendReply,
+  removeComment
+} from "../../store/comments/commentsSlice";
+
+import type { CommentPopulated } from "../../types/comment.types";
+
+interface CommentCreatedPayload {
+  stickyNoteId: string;
+  comment: CommentPopulated;
+}
+
+interface CommentReplyCreatedPayload {
+  stickyNoteId: string;
+  parentCommentId: string;
+  reply: CommentPopulated;
+}
+
+interface CommentDeletedPayload {
+  stickyNoteId: string;
+  commentId: string;
+}
+
 export const registerSocketHandlers = (): (() => void) => {
 
   const handleCreated = (incoming: CanvasElement) => {
@@ -153,6 +177,28 @@ export const registerSocketHandlers = (): (() => void) => {
     }));
   };
 
+  const handleCommentCreated = (payload: CommentCreatedPayload) => {
+    store.dispatch(appendComment({
+      stickyNoteId: payload.stickyNoteId,
+      comment: payload.comment
+    }));
+  };
+
+  const handleCommentReplyCreated = (payload: CommentReplyCreatedPayload) => {
+    store.dispatch(appendReply({
+      stickyNoteId: payload.stickyNoteId,
+      parentCommentId: payload.parentCommentId,
+      reply: payload.reply
+    }));
+  };
+
+  const handleCommentDeleted = (payload: CommentDeletedPayload) => {
+    store.dispatch(removeComment({
+      stickyNoteId: payload.stickyNoteId,
+      commentId: payload.commentId
+    }));
+  };
+
   socket.on("element:created", handleCreated);
   socket.on("sync:conflict", handleConflict);
   socket.on("element:updated", handleUpdated);
@@ -166,6 +212,9 @@ export const registerSocketHandlers = (): (() => void) => {
   socket.on("layer:element:moved", handleLayerElementMoved);
   socket.on("layer:edit:rejected", handleLayerEditRejected);
   socket.on("layer:offline:rejected", handleLayerOfflineRejected);
+  socket.on("comment:created", handleCommentCreated);
+  socket.on("comment:reply:created", handleCommentReplyCreated);
+  socket.on("comment:deleted", handleCommentDeleted);
 
   return () => {
     socket.off("element:created", handleCreated);
@@ -181,5 +230,8 @@ export const registerSocketHandlers = (): (() => void) => {
     socket.off("layer:element:moved", handleLayerElementMoved);
     socket.off("layer:edit:rejected", handleLayerEditRejected);
     socket.off("layer:offline:rejected", handleLayerOfflineRejected);
+    socket.off("comment:created", handleCommentCreated);
+    socket.off("comment:reply:created", handleCommentReplyCreated);
+    socket.off("comment:deleted", handleCommentDeleted);
   };
 };

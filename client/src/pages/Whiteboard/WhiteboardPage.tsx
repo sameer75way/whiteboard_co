@@ -9,10 +9,10 @@ import { useOfflineSync } from "../../hooks/useOfflineSync";
 import { CanvasBoard } from "./components/Canvas/CanvasBoard";
 import { Toolbar } from "./components/Toolbar/Toolbar";
 import { StylePanel } from "./components/Toolbar/StylePanel";
-import { ConnectionStatusBar } from "./components/Sync/ConnectionStatusBar";
 import { LayersPanel } from "./components/LayersPanel/index";
 import { VersionHistoryPanel } from "./components/VersionHistoryPanel/index";
 import { SnapshotPreviewDialog } from "./components/VersionHistoryPanel/SnapshotPreviewDialog";
+import { CommentPanel } from "./components/CommentPanel/index";
 import { setElements } from "../../store/canvas/canvasSlice";
 import { setLayers } from "../../store/layers/layersSlice";
 import { removeNotification } from "../../store/notifications/notificationsSlice";
@@ -133,7 +133,10 @@ export const WhiteboardPage = () => {
     handleCreateSticky,
     handleDelete,
     computeStateDiffAndSync,
-    selectedElementId
+    selectedElementId,
+    deleteConfirmOpen,
+    setDeleteConfirmOpen,
+    executeDelete
   } = useWhiteboardCommands(id);
 
   const {
@@ -152,9 +155,11 @@ export const WhiteboardPage = () => {
     const handleKey = (e: KeyboardEvent) => {
       if (isViewer || isLayerLocked) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const targetEl = e.target as HTMLElement;
+      if (targetEl.isContentEditable) return;
       if (e.ctrlKey && e.shiftKey && e.key === "Z") { computeStateDiffAndSync('redo'); return; }
       if (e.ctrlKey && e.key === "z") { computeStateDiffAndSync('undo'); return; }
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedElementId) handleDelete();
+      if (e.key === "Delete" && selectedElementId) handleDelete();
     };
     
     window.addEventListener("keydown", handleKey);
@@ -209,7 +214,6 @@ export const WhiteboardPage = () => {
     resetSaveForm({ name: `Version ${totalSnapshots + 1}` });
     setSaveDialogOpen(true);
   };
-
   const handleSaveVersion = async (data: { name: string }) => {
     if (!id || !data.name.trim()) return;
     setSaveDialogOpen(false);
@@ -230,6 +234,7 @@ export const WhiteboardPage = () => {
       {!isViewer && (
         <>
           <Toolbar
+            boardId={id}
             onRectangle={handleCreateRectangle}
             onCircle={handleCreateCircle}
             onTriangle={handleCreateTriangle}
@@ -278,7 +283,7 @@ export const WhiteboardPage = () => {
 
       <SnapshotPreviewDialog />
 
-      <ConnectionStatusBar />
+      <CommentPanel />
 
       <WhiteboardModals
         boardId={id}
@@ -314,10 +319,25 @@ export const WhiteboardPage = () => {
             />
           </DialogContent>
           <DialogActions>
-            <Button type="button" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">Save</Button>
+            <Button type="button" onClick={() => setSaveDialogOpen(false)} variant="text">Cancel</Button>
+            <Button type="submit">Save</Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+        <DialogTitle>Delete Sticky Note?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Deleting this sticky note will also delete all its comments. Are you sure?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)} variant="text">Cancel</Button>
+          <Button onClick={() => { setDeleteConfirmOpen(false); executeDelete(); }} color="error">
+            Delete
+          </Button>
+        </DialogActions>
       </Dialog>
     </WhiteboardContainer>
   );

@@ -105,13 +105,8 @@ export const deleteSnapshotController = catchAsync(async (
   const snapshotId = req.params.snapshotId as string;
   const userId = req.user?.id;
 
-  const snapshot = await getSnapshotById(snapshotId);
-  if (snapshot.boardId !== boardId) {
-    return res.status(400).json({ success: false, message: "Snapshot does not belong to this board" });
-  }
-
   await verifyBoardOwner(boardId, userId!);
-  await deleteSnapshot(snapshotId);
+  await deleteSnapshot(snapshotId, boardId);
 
   const io = getIo();
   io.to(boardId).emit("snapshot:deleted", {

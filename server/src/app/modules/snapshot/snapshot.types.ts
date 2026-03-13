@@ -1,5 +1,6 @@
 import type { CanvasElement } from "../../common/types/element.types";
 import type { ILayer } from "../layer/layer.model";
+import type { IComment } from "../comment/comment.model";
 
 export interface SnapshotListItem {
   id: string;
@@ -14,6 +15,7 @@ export interface SnapshotDetail extends SnapshotListItem {
   state: {
     elements: CanvasElement[];
     layers: ILayer[];
+    comments: IComment[];
   };
 }
 
@@ -24,6 +26,7 @@ export interface CreateSnapshotInput {
   state: {
     elements: CanvasElement[];
     layers: ILayer[];
+    comments: IComment[];
   };
   createdBy: string;
 }

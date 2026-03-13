@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import type { CanvasElement } from "../../common/types/element.types";
 import type { ILayer } from "../layer/layer.model";
+import type { IComment } from "../comment/comment.model";
 
 export interface ISnapshot extends mongoose.Document {
   boardId: string;
@@ -9,6 +10,7 @@ export interface ISnapshot extends mongoose.Document {
   state: {
     elements: CanvasElement[];
     layers: ILayer[];
+    comments: IComment[];
   };
   createdBy: string;
   createdAt: Date;

@@ -37,6 +37,7 @@ export interface IElement {
   updatedBy: mongoose.Types.ObjectId;
   zIndex: number;
   layerId?: string;
+  data?: Record<string, unknown>;
 }
 
 const elementSchema = new mongoose.Schema<IElement>(
@@ -114,6 +115,10 @@ const elementSchema = new mongoose.Schema<IElement>(
     layerId: {
       type: String,
       default: ""
+    },
+
+    data: {
+      type: mongoose.Schema.Types.Mixed
     },
 
     createdBy: {

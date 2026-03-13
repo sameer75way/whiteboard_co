@@ -85,10 +85,24 @@ export const setLocked = async (
 export const updateLayerFields = async (
   boardId: string,
   layerId: string,
-  changes: { name?: string; isVisible?: boolean; isLocked?: boolean }
+  changes: { name?: string; isVisible?: boolean; isLocked?: boolean },
+  userId?: string,
+  userRole?: string
 ): Promise<{ layer: ILayer; changes: typeof changes }> => {
   const board = await BoardModel.findById(boardId);
   if (!board) throw new AppError("Board not found", 404);
+
+  if (changes.isLocked !== undefined && userId) {
+    const isOwner = board.owner.toString() === userId;
+    const isCollaborator = board.members.some(
+      (m) => m.user.toString() === userId && m.role === "Collaborator" && m.status === "Accepted"
+    );
+    const isAdmin = userRole === "Admin";
+
+    if (!isOwner && !isCollaborator && !isAdmin) {
+      throw new AppError("Only editors (Owners and Collaborators) can lock or unlock layers", 403);
+    }
+  }
 
   const layer = getLayerById(board.layers, layerId);
   if (!layer) throw new AppError("Layer not found", 404);
@@ -114,8 +128,6 @@ export const deleteLayer = async (
   }
 
   const layerIndex = board.layers.findIndex((l) => l.id === layerId);
-  if (layerIndex === -1) throw new AppError("Layer not found", 404);
-
   if (layerIndex === -1) throw new AppError("Layer not found", 404);
 
   board.layers.splice(layerIndex, 1);

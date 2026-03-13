@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { store, type RootState } from "../../../store/index";
 import {
@@ -111,7 +111,9 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     emitCreateElement(createLineElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
   }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
-  const handleDelete = useCallback(() => {
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const executeDelete = useCallback(() => {
     if (!boardId || !selectedElementId) return;
     dispatch(deleteElement(selectedElementId));
     if (navigator.onLine) {
@@ -126,6 +128,15 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
       });
     }
   }, [boardId, selectedElementId, selectedElement, dispatch]);
+
+  const handleDelete = useCallback(() => {
+    if (!boardId || !selectedElementId) return;
+    if (selectedElement?.type === "sticky") {
+      setDeleteConfirmOpen(true);
+      return;
+    }
+    executeDelete();
+  }, [boardId, selectedElementId, selectedElement, executeDelete]);
 
   const computeStateDiffAndSync = useCallback((actionType: "undo" | "redo") => {
     const state = store.getState().canvas;
@@ -172,6 +183,9 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     handleCreateLine,
     handleDelete,
     computeStateDiffAndSync,
-    selectedElementId
+    selectedElementId,
+    deleteConfirmOpen,
+    setDeleteConfirmOpen,
+    executeDelete
   };
 };

@@ -1,6 +1,7 @@
 import { SnapshotModel, type ISnapshot } from "./snapshot.model";
 import { ElementModel } from "../element/element.model";
 import { BoardModel } from "../board/board.model";
+import { CommentModel, type IComment } from "../comment/comment.model";
 import { AppError } from "../../common/middlewares/errorHandler";
 import type {
   CreateSnapshotInput,
@@ -99,6 +100,16 @@ export const restoreSnapshot = async (
     layers: snapshot.state.layers
   });
 
+  await CommentModel.updateMany(
+    { boardId: snapshot.boardId },
+    { isDeleted: true }
+  );
+
+  const snapshotComments = snapshot.state.comments ?? [];
+  if (snapshotComments.length > 0) {
+    await CommentModel.insertMany(snapshotComments);
+  }
+
   const restoreSnap = await takeSnapshot({
     boardId: snapshot.boardId,
     type: "restore",
@@ -115,12 +126,17 @@ export const restoreSnapshot = async (
 };
 
 export const deleteSnapshot = async (
-  snapshotId: string
+  snapshotId: string,
+  boardId: string
 ): Promise<void> => {
-  const result = await SnapshotModel.findByIdAndDelete(snapshotId);
-  if (!result) {
+  const snapshot = await SnapshotModel.findById(snapshotId);
+  if (!snapshot) {
     throw new AppError("Snapshot not found", 404);
   }
+  if (snapshot.boardId !== boardId) {
+    throw new AppError("Snapshot does not belong to this board", 400);
+  }
+  await SnapshotModel.findByIdAndDelete(snapshotId);
 };
 
 export const verifyBoardOwner = async (
@@ -141,10 +157,11 @@ export const verifyBoardOwner = async (
 
 export const getCurrentBoardState = async (
   boardId: string
-): Promise<{ elements: CanvasElement[]; layers: ILayer[] }> => {
-  const [elementDocs, board] = await Promise.all([
+): Promise<{ elements: CanvasElement[]; layers: ILayer[]; comments: IComment[] }> => {
+  const [elementDocs, board, commentDocs] = await Promise.all([
     ElementModel.find({ boardId }).lean(),
-    BoardModel.findById(boardId).lean()
+    BoardModel.findById(boardId).lean(),
+    CommentModel.find({ boardId, isDeleted: false }).lean()
   ]);
 
   const elements: CanvasElement[] = elementDocs.map((doc) => ({
@@ -161,10 +178,13 @@ export const getCurrentBoardState = async (
     version: doc.version,
     lamportTs: doc.lamportTs,
     zIndex: doc.zIndex,
-    layerId: doc.layerId
+    layerId: doc.layerId,
+    data: doc.data
   }));
 
   const layers: ILayer[] = board?.layers ?? [];
 
-  return { elements, layers };
+  const comments = commentDocs as IComment[];
+
+  return { elements, layers, comments };
 };

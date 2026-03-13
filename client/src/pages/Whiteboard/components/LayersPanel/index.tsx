@@ -163,6 +163,11 @@ const LayerName = styled(Typography)({
   userSelect: "none"
 });
 
+const StyledForm = styled("form")({
+  flex: 1,
+  display: "flex"
+});
+
 const LockIndicator = styled(LockIcon)({
   fontSize: 14,
   color: "#f59e0b",
@@ -260,7 +265,7 @@ const SortableLayerRow = ({
   const renderNameSection = () => {
     if (isEditing) {
       return (
-        <form onSubmit={handleEditSubmit(onEditSubmit)} style={{ flex: 1, display: "flex" }}>
+        <StyledForm onSubmit={handleEditSubmit(onEditSubmit)}>
           <Controller
             name="name"
             control={editControl}
@@ -278,7 +283,7 @@ const SortableLayerRow = ({
               />
             )}
           />
-        </form>
+        </StyledForm>
       );
     }
 

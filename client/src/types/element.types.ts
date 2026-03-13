@@ -48,4 +48,5 @@ export interface CanvasElement {
   lamportTs?: LamportTimestamp;
   zIndex: number;
   layerId?: string;
+  data?: Record<string, unknown>;
 }

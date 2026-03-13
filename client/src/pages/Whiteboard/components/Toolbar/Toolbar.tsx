@@ -11,8 +11,11 @@ import RedoIcon from "@mui/icons-material/Redo";
 import HistoryIcon from "@mui/icons-material/History";
 import SaveIcon from "@mui/icons-material/Save";
 import { styled } from "@mui/material/styles";
+import LayersIcon from "@mui/icons-material/Layers";
+import { ConnectionStatusBar } from "../Sync/ConnectionStatusBar";
 
 interface Props {
+  boardId: string;
   onRectangle: () => void;
   onCircle: () => void;
   onTriangle: () => void;
@@ -144,9 +147,8 @@ const ToolBtn = ({
   );
 };
 
-import LayersIcon from "@mui/icons-material/Layers";
-
 export const Toolbar = ({
+  boardId,
   onRectangle,
   onCircle,
   onTriangle,
@@ -219,6 +221,10 @@ export const Toolbar = ({
       >
         <SaveIcon fontSize="small" />
       </ToolBtn>
+
+      <StyledDivider />
+
+      <ConnectionStatusBar boardId={boardId} />
     </ToolbarContainer>
   );
 };

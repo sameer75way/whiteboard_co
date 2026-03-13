@@ -72,19 +72,23 @@ export const createStickyNote = (
     type: "sticky",
     position: { x, y },
     dimensions: {
-      width: 200,
+      width: 240,
       height: 200
     },
     rotation: 0,
     style: {
-      fill: "#FFF59D",
+      fill: "#FFF9C4",
       stroke: "#FBC02D",
       strokeWidth: 2,
       opacity: 1
     },
     version: 1,
     zIndex: 0,
-    layerId
+    layerId,
+    data: {
+      backgroundColor: "#FFF9C4",
+      richContent: { type: "doc", content: [{ type: "paragraph" }] }
+    }
   };
 };
 

@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { catchAsync } from "../../common/utils/catchAsync";
 import { successResponse } from "../../common/utils/response.utils";
 import { getIo } from "../../sockets/socket.server";
-import { AppError } from "../../common/middlewares/errorHandler";
 import {
   createLayer,
   updateLayerFields,
@@ -29,27 +28,13 @@ export const updateLayerController = catchAsync(async (req: Request, res: Respon
   const userId = req.user?.id;
   const { name, isVisible, isLocked } = req.body;
 
-  if (isLocked !== undefined) {
-    const { BoardModel } = await import("../board/board.model");
-    const board = await BoardModel.findById(boardId);
-    if (!board) throw new AppError("Board not found", 404);
 
-    const isOwner = board.owner.toString() === userId;
-    const isCollaborator = board.members.some(
-      (m) => m.user.toString() === userId && m.role === "Collaborator" && m.status === "Accepted"
-    );
-    const isAdmin = req.user?.role === "Admin";
-
-    if (!isOwner && !isCollaborator && !isAdmin) {
-      throw new AppError("Only editors (Owners and Collaborators) can lock or unlock layers", 403);
-    }
-  }
 
   const { layer, changes } = await updateLayerFields(boardId, layerId, {
     name,
     isVisible,
     isLocked
-  });
+  }, userId, req.user?.role);
 
   const io = getIo();
   io.to(boardId).emit("layer:updated", { layerId, changes });

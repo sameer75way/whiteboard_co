@@ -3,8 +3,9 @@ import { Request, Response } from "express";
 import { processSync } from "./sync.service";
 
 import { successResponse } from "../../common/utils/response.utils";
+import { catchAsync } from "../../common/utils/catchAsync";
 
-export const syncController = async (
+export const syncController = catchAsync(async (
   req: Request,
   res: Response
 ) => {
@@ -26,4 +27,4 @@ export const syncController = async (
     "Sync completed",
     result
   );
-};
+});

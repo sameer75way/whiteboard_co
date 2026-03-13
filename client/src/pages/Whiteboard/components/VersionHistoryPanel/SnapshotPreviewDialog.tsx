@@ -28,6 +28,8 @@ import { useGetSnapshotQuery, useRestoreSnapshotMutation, useDeleteSnapshotMutat
 import { useGetBoardQuery } from "../../../../services/api/boardApi";
 import { CanvasBoard } from "../Canvas/CanvasBoard";
 import DeleteIcon from "@mui/icons-material/Delete";
+import type { ApiError } from "../../../../types/api.types";
+import { getApiErrorMessage } from "../../../../types/api.types";
 
 interface BoardMember {
   user: string | { _id: string };
@@ -35,9 +37,7 @@ interface BoardMember {
   status: string;
 }
 
-interface ApiError {
-  data?: { message?: string };
-}
+
 
 const PreviewBanner = styled(Chip)(({ theme }) => ({
   position: "absolute",
@@ -132,9 +132,8 @@ export const SnapshotPreviewDialog = () => {
       await restoreApi({ boardId: preview.boardId, snapshotId: preview.id }).unwrap();
       enqueueSnackbar("Board restored successfully", { variant: "success" });
       handleClose();
-    } catch (err: unknown) {
-      const apiErr = err as ApiError;
-      enqueueSnackbar(apiErr?.data?.message || "Failed to restore board", { variant: "error" });
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err as ApiError, "Failed to restore board"), { variant: "error" });
     }
   };
 
@@ -145,9 +144,8 @@ export const SnapshotPreviewDialog = () => {
       await deleteApi({ boardId: preview.boardId, snapshotId: preview.id }).unwrap();
       enqueueSnackbar("Snapshot deleted.", { variant: "success" });
       handleClose();
-    } catch (err: unknown) {
-      const apiErr = err as ApiError;
-      enqueueSnackbar(apiErr?.data?.message || "Failed to delete snapshot", { variant: "error" });
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err as ApiError, "Failed to delete snapshot"), { variant: "error" });
     }
   };
 

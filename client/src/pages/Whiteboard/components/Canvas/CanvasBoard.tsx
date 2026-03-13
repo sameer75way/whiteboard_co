@@ -237,6 +237,14 @@ export const CanvasBoard = ({ boardId, isViewer, readOnly = false, previewElemen
   const [isPanMode, setIsPanMode] = useState(false);
   const setupPanListeners = useCallback(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target.isContentEditable
+      ) {
+        return;
+      }
       if (e.code === "Space" && !e.repeat) {
         e.preventDefault();
         setIsPanMode(true);

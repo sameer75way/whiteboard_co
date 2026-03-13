@@ -1,4 +1,5 @@
-import { Group, Rect, Circle, Text, RegularPolygon, Line } from "react-konva";
+import { Rect, Circle, Text, RegularPolygon, Line } from "react-konva";
+import { StickyNoteElement } from "./StickyNoteElement";
 import { type KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
 import { store } from "../../../../store/index";
@@ -28,6 +29,9 @@ export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEdi
   const userName = useSelector((state: RootState) => state.auth.user?.name) || "User";
   const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group | Konva.RegularPolygon | Konva.Line>(null);
   const lastCursorEmitRef = useRef<number>(0);
+
+  const selectedElementId = useSelector((state: RootState) => state.canvas.selectedElementId);
+  const isSelected = selectedElementId === element._id;
 
   const isDisabled = isViewer || isLayerLocked;
 
@@ -102,9 +106,9 @@ export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEdi
     const node = e.target;
     if (navigator.onLine) {
       const now = Date.now();
-      if (now - lastCursorEmitRef.current >= 32) {
+      if (now - lastCursorEmitRef.current >= 100) {
         lastCursorEmitRef.current = now;
-        socket.emit("element:update", {
+        socket.volatile.emit("element:update", {
           boardId,
           elementId: element._id,
           payload: {
@@ -297,15 +301,11 @@ export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEdi
 
   if (element.type === "sticky") {
     return (
-      <Group
-        ref={shapeRef as RefObject<Konva.Group>}
-        id={element._id}
-        x={element.position.x}
-        y={element.position.y}
-        width={element.dimensions.width}
-        height={element.dimensions.height}
-        rotation={element.rotation || 0}
-        draggable={!isDisabled}
+      <StickyNoteElement
+        element={element}
+        isSelected={!!isSelected}
+        isDisabled={!!isDisabled}
+        shapeRef={shapeRef as React.RefObject<Konva.Group>}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -314,32 +314,7 @@ export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEdi
         onTransform={handleTransform}
         onTransformEnd={handleTransformEnd}
         onContextMenu={handleRightClick}
-      >
-        <Rect
-          width={element.dimensions.width}
-          height={element.dimensions.height}
-          fill={element.style.fill}
-          stroke={element.style.stroke}
-          strokeWidth={element.style.strokeWidth}
-          opacity={element.style.opacity}
-          cornerRadius={4}
-          shadowColor="rgba(0,0,0,0.15)"
-          shadowBlur={8}
-          shadowOffsetY={2}
-        />
-        <Text
-          x={10}
-          y={10}
-          width={element.dimensions.width - 20}
-          height={element.dimensions.height - 20}
-          text={element.content || "Sticky note"}
-          fontSize={16}
-          fill="#333"
-          lineHeight={1.4}
-          onDblClick={handleDblClick}
-          onDblTap={handleDblClick}
-        />
-      </Group>
+      />
     );
   }
 

@@ -1,12 +1,12 @@
-import Dexie, {type  Table } from "dexie";
-import type { CanvasElement, LamportTimestamp } from "../../types/element.types";
+import Dexie, { type Table } from "dexie";
+import type { LamportTimestamp } from "../../types/element.types";
 
 export interface OfflineOperation {
   id?: number;
   boardId: string;
   elementId: string;
-  operation: "create" | "update" | "delete";
-  payload: Partial<CanvasElement>;
+  operation: "create" | "update" | "delete" | "comment:create" | "comment:reply" | "comment:delete";
+  payload: Record<string, any>;
   clientVersion: number;
   lamportTs?: LamportTimestamp;
 }

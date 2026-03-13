@@ -19,10 +19,10 @@ import { styled } from "@mui/material/styles";
 import { useSnackbar } from "notistack";
 import { useRestoreSnapshotMutation } from "../../../../services/api/snapshotApi";
 import type { SnapshotListItem } from "../../../../store/snapshot/snapshotSlice";
+import type { ApiError } from "../../../../types/api.types";
+import { getApiErrorMessage } from "../../../../types/api.types";
 
-interface ApiError {
-  data?: { message?: string };
-}
+
 
 interface SnapshotRowProps {
   snapshot: SnapshotListItem;
@@ -98,9 +98,8 @@ export const SnapshotRow = ({
     try {
       await restoreApi({ boardId, snapshotId: snapshot.id }).unwrap();
       enqueueSnackbar("Board restored successfully", { variant: "success" });
-    } catch (err: unknown) {
-      const apiErr = err as ApiError;
-      enqueueSnackbar(apiErr?.data?.message || "Failed to restore board", { variant: "error" });
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err as ApiError, "Failed to restore board"), { variant: "error" });
     }
   };
 

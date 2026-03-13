@@ -84,7 +84,14 @@ const FilterContainer = styled(Box)({
 });
 
 const StyledDrawer = styled(Drawer)({
-  zIndex: 1300
+  zIndex: 1200,
+  "& .MuiDrawer-paper": {
+    background: "rgba(15, 23, 42, 0.98)",
+    backdropFilter: "blur(16px)",
+    top: "72px",
+    height: "calc(100% - 72px)",
+    borderTopLeftRadius: "8px"
+  }
 });
 
 const CloseButton = styled(IconButton)({

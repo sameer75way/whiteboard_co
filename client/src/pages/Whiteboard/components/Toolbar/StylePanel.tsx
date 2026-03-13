@@ -152,8 +152,7 @@ export const StylePanel = ({ boardId }: { boardId: string }) => {
   
   const element = selectedElementId ? elements[selectedElementId] : null;
 
-
-  if (!element) return null;
+  if (!element || element.type === "sticky") return null;
 
   const handleUpdate = async (updates: Partial<typeof element.style>) => {
     const lamportTs = nextLamport();
