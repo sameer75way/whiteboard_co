@@ -52,7 +52,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
 
   const handlePress = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (isViewer) return;
-    e.cancelBubble = true;
+    Object.assign(e, { cancelBubble: true });
     const allElements = Object.values(store.getState().canvas.elements) as Element[];
     const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
     broadcastUpdate({
@@ -66,7 +66,7 @@ export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props)
   }, [dispatch, element, broadcastUpdate, isViewer]);
 
   const handleDragStart = useCallback((e: KonvaEventObject<DragEvent>) => {
-    e.cancelBubble = true;
+    Object.assign(e, { cancelBubble: true });
     const allElements = Object.values(store.getState().canvas.elements) as Element[];
     const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
     broadcastUpdate({
