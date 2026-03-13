@@ -93,21 +93,18 @@ export const restoreSnapshot = async (
   await ElementModel.deleteMany({ boardId: snapshot.boardId });
 
   if (snapshot.state.elements.length > 0) {
-    await ElementModel.insertMany(snapshot.state.elements);
+    await ElementModel.insertMany(snapshot.state.elements, { ordered: false });
   }
 
   await BoardModel.findByIdAndUpdate(snapshot.boardId, {
     layers: snapshot.state.layers
   });
 
-  await CommentModel.updateMany(
-    { boardId: snapshot.boardId },
-    { isDeleted: true }
-  );
+  await CommentModel.deleteMany({ boardId: snapshot.boardId });
 
   const snapshotComments = snapshot.state.comments ?? [];
   if (snapshotComments.length > 0) {
-    await CommentModel.insertMany(snapshotComments);
+    await CommentModel.insertMany(snapshotComments, { ordered: false });
   }
 
   const restoreSnap = await takeSnapshot({

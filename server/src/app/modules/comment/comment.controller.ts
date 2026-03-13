@@ -9,8 +9,6 @@ import {
   softDeleteComment
 } from "./comment.service";
 
-
-
 export const listCommentsController = catchAsync(async (
   req: Request,
   res: Response
@@ -31,10 +29,13 @@ export const createCommentController = catchAsync(async (
   const comment = await createComment(userId, elementId, content);
 
   const io = getIo();
-  io.to(`sticky:${elementId}`).emit("comment:created", {
-    stickyNoteId: elementId,
-    comment
-  });
+  const socketId = req.headers["x-socket-id"] as string | undefined;
+  const room = `sticky:${elementId}`;
+  if (socketId) {
+    io.to(room).except(socketId).emit("comment:created", { stickyNoteId: elementId, comment });
+  } else {
+    io.to(room).emit("comment:created", { stickyNoteId: elementId, comment });
+  }
 
   return successResponse(res, "Comment created", comment);
 });
@@ -51,11 +52,13 @@ export const createReplyController = catchAsync(async (
   const reply = await createReply(userId, elementId, commentId, content);
 
   const io = getIo();
-  io.to(`sticky:${elementId}`).emit("comment:reply:created", {
-    stickyNoteId: elementId,
-    parentCommentId: commentId,
-    reply
-  });
+  const socketId = req.headers["x-socket-id"] as string | undefined;
+  const room = `sticky:${elementId}`;
+  if (socketId) {
+    io.to(room).except(socketId).emit("comment:reply:created", { stickyNoteId: elementId, parentCommentId: commentId, reply });
+  } else {
+    io.to(room).emit("comment:reply:created", { stickyNoteId: elementId, parentCommentId: commentId, reply });
+  }
 
   return successResponse(res, "Reply created", reply);
 });
@@ -71,10 +74,13 @@ export const deleteCommentController = catchAsync(async (
   await softDeleteComment(commentId, userId);
 
   const io = getIo();
-  io.to(`sticky:${elementId}`).emit("comment:deleted", {
-    stickyNoteId: elementId,
-    commentId
-  });
+  const socketId = req.headers["x-socket-id"] as string | undefined;
+  const room = `sticky:${elementId}`;
+  if (socketId) {
+    io.to(room).except(socketId).emit("comment:deleted", { stickyNoteId: elementId, commentId });
+  } else {
+    io.to(room).emit("comment:deleted", { stickyNoteId: elementId, commentId });
+  }
 
   return successResponse(res, "Comment deleted");
 });

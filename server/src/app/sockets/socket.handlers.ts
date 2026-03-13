@@ -266,6 +266,14 @@ export const registerSocketHandlers = (
     }
   });
 
+  socket.on("element:drag", (data: { boardId: string; elementId: string; x: number; y: number }) => {
+    socket.to(data.boardId).volatile.emit("element:dragged", {
+      elementId: data.elementId,
+      x: data.x,
+      y: data.y
+    });
+  });
+
 
   socket.on("element:delete", async (data: DeleteElementPayload) => {
     try {
@@ -307,7 +315,7 @@ export const registerSocketHandlers = (
 
   socket.on("cursor:move", (data: CursorMovePayload) => {
     const { boardId, x, y, name } = data;
-    socket.to(boardId).emit("cursor:moved", { userId, name, x, y });
+    socket.to(boardId).volatile.emit("cursor:moved", { userId, name, x, y });
   });
 
 
