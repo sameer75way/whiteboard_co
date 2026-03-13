@@ -1,32 +1,33 @@
-import { db } from "./offlineDB";
+import { db, type OfflineOperation } from "./offlineDB";
 import { socket } from "../socket/socketClient";
 
 export const syncOfflineOperations = async () => {
   const operations = await db.operations.toArray();
   if (!operations.length) return;
 
-  const commentOps = operations.filter((op): op is typeof operations[0] => op.operation.startsWith("comment:"));
-  const elementOps = operations.filter((op): op is typeof operations[0] => !op.operation.startsWith("comment:"));
+  const commentOps = operations.filter((op) => op.operation.startsWith("comment:"));
+  const elementOps = operations.filter((op) => !op.operation.startsWith("comment:"));
 
-  try {
-    await syncCommentOperations(commentOps);
-  } catch (error) {
-    console.error("Comment sync failed, retaining operations", error);
-    return;
+  if (commentOps.length > 0) {
+    try {
+      await syncCommentOperations(commentOps);
+      await db.operations.bulkDelete(commentOps.map((op) => op.id!));
+    } catch (error) {
+      console.error("Comment sync failed, retaining comment operations", error);
+    }
   }
 
   if (elementOps.length > 0) {
     const acknowledged = await syncElementsViaSocket(elementOps);
     if (!acknowledged) {
-      console.error("Element sync not acknowledged, retaining operations");
+      console.error("Element sync not acknowledged, retaining element operations");
       return;
     }
+    await db.operations.bulkDelete(elementOps.map((op) => op.id!));
   }
-
-  await db.operations.clear();
 };
 
-const syncCommentOperations = async (commentOps: any[]) => {
+const syncCommentOperations = async (commentOps: OfflineOperation[]) => {
   if (!commentOps.length) return;
 
   const { store } = await import("../../store/index");
@@ -36,6 +37,9 @@ const syncCommentOperations = async (commentOps: any[]) => {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+  if (socket.id) {
+    headers["x-socket-id"] = socket.id;
   }
 
   for (const op of commentOps) {
@@ -66,7 +70,7 @@ const syncCommentOperations = async (commentOps: any[]) => {
   }
 };
 
-const syncElementsViaSocket = (elementOps: any[]): Promise<boolean> => {
+const syncElementsViaSocket = (elementOps: OfflineOperation[]): Promise<boolean> => {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => resolve(false), 15000);
 

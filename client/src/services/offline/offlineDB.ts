@@ -6,7 +6,7 @@ export interface OfflineOperation {
   boardId: string;
   elementId: string;
   operation: "create" | "update" | "delete" | "comment:create" | "comment:reply" | "comment:delete";
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   clientVersion: number;
   lamportTs?: LamportTimestamp;
 }

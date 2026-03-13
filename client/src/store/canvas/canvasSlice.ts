@@ -68,6 +68,13 @@ const canvasSlice = createSlice({
       delete state.elements[action.payload];
     },
 
+    patchElementPosition: (state, action: PayloadAction<{ elementId: string; x: number; y: number }>) => {
+      const el = state.elements[action.payload.elementId];
+      if (el) {
+        el.position = { x: action.payload.x, y: action.payload.y };
+      }
+    },
+
     selectElement: (state, action: PayloadAction<string | null>) => {
       state.selectedElementId = action.payload;
       if (action.payload && state.elements[action.payload]) {
@@ -126,6 +133,7 @@ export const {
   addElementLocally,
   updateElementLocally,
   deleteElementLocally,
+  patchElementPosition,
   selectElement,
   setElements,
   deleteElementsFromLayer,

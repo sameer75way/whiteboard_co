@@ -187,13 +187,13 @@ export const CanvasBoard = ({ boardId, isViewer, readOnly = false, previewElemen
     const stage = e.target.getStage();
     if (!stage) return;
     const now = Date.now();
-    if (now - lastCursorEmitRef.current < 30) return;
+    if (now - lastCursorEmitRef.current < 50) return;
     lastCursorEmitRef.current = now;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
     const transform = stage.getAbsoluteTransform().copy().invert();
     const worldPos = transform.point(pointer);
-    socket.emit("cursor:move", { boardId, x: worldPos.x, y: worldPos.y, name: userName });
+    socket.volatile.emit("cursor:move", { boardId, x: worldPos.x, y: worldPos.y, name: userName });
   }, [boardId, userName, readOnly]);
 
   const handleWheel = useCallback((e: KonvaEventObject<WheelEvent>) => {

@@ -461,35 +461,38 @@ export const StickyNoteElement = ({
       onDblTap={handleDblClick}
       onDragStart={props.onDragStart}
       onDragMove={(e) => {
-        if (navigator.onLine) {
-          const now = Date.now();
-          if (now - lastCursorEmitRef.current >= 100) {
-            lastCursorEmitRef.current = now;
-            socket.volatile.emit("element:update", {
-              boardId: element.boardId || "",
-              elementId: element._id,
-              payload: {
-                ...element,
-                position: { x: e.target.x(), y: e.target.y() }
-              }
-            });
-            const stage = e.target.getStage();
-            if (stage) {
-              const pointer = stage.getPointerPosition();
-              const userName = store.getState().auth.user?.name;
-              if (pointer && userName) {
-                const transform = stage.getAbsoluteTransform().copy().invert();
-                const worldPos = transform.point(pointer);
-                socket.emit("cursor:move", {
-                  boardId: element.boardId || "",
-                  x: worldPos.x,
-                  y: worldPos.y,
-                  name: userName
-                });
-              }
+        if (!navigator.onLine) {
+          if (props.onDragMove) props.onDragMove(e);
+          return;
+        }
+        const now = Date.now();
+
+        if (now - lastCursorEmitRef.current >= 50) {
+          lastCursorEmitRef.current = now;
+          socket.volatile.emit("element:drag", {
+            boardId: element.boardId || "",
+            elementId: element._id,
+            x: e.target.x(),
+            y: e.target.y()
+          });
+
+          const stage = e.target.getStage();
+          if (stage) {
+            const pointer = stage.getPointerPosition();
+            const userName = store.getState().auth.user?.name;
+            if (pointer && userName) {
+              const transform = stage.getAbsoluteTransform().copy().invert();
+              const worldPos = transform.point(pointer);
+              socket.volatile.emit("cursor:move", {
+                boardId: element.boardId || "",
+                x: worldPos.x,
+                y: worldPos.y,
+                name: userName
+              });
             }
           }
         }
+
         if (props.onDragMove) props.onDragMove(e);
       }}
       onDragEnd={props.onDragEnd}

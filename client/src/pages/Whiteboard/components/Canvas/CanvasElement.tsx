@@ -102,37 +102,41 @@ export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEdi
     });
   }, [element, broadcastUpdate]);
 
+  const lastDragEmitRef = useRef<number>(0);
+
   const handleDragMove = useCallback((e: KonvaEventObject<DragEvent>) => {
+    if (!navigator.onLine) return;
     const node = e.target;
-    if (navigator.onLine) {
-      const now = Date.now();
-      if (now - lastCursorEmitRef.current >= 100) {
-        lastCursorEmitRef.current = now;
-        socket.volatile.emit("element:update", {
-          boardId,
-          elementId: element._id,
-          payload: {
-            ...element,
-            position: { x: node.x(), y: node.y() }
-          }
-        });
-        const stage = node.getStage();
-        if (stage) {
-          const pointer = stage.getPointerPosition();
-          if (pointer) {
-            const transform = stage.getAbsoluteTransform().copy().invert();
-            const worldPos = transform.point(pointer);
-            socket.emit("cursor:move", {
-              boardId,
-              x: worldPos.x,
-              y: worldPos.y,
-              name: userName
-            });
-          }
+    const now = Date.now();
+
+    if (now - lastDragEmitRef.current >= 50) {
+      lastDragEmitRef.current = now;
+      socket.volatile.emit("element:drag", {
+        boardId,
+        elementId: element._id,
+        x: node.x(),
+        y: node.y()
+      });
+    }
+
+    if (now - lastCursorEmitRef.current >= 50) {
+      lastCursorEmitRef.current = now;
+      const stage = node.getStage();
+      if (stage) {
+        const pointer = stage.getPointerPosition();
+        if (pointer) {
+          const transform = stage.getAbsoluteTransform().copy().invert();
+          const worldPos = transform.point(pointer);
+          socket.volatile.emit("cursor:move", {
+            boardId,
+            x: worldPos.x,
+            y: worldPos.y,
+            name: userName
+          });
         }
       }
     }
-  }, [boardId, element, userName]);
+  }, [boardId, element._id, userName]);
 
   const handleTransformEnd = useCallback(() => {
     const node = shapeRef.current;

@@ -6,7 +6,8 @@ import {
   addElementLocally,
   updateElementLocally,
   deleteElementLocally,
-  deleteElementsFromLayer
+  deleteElementsFromLayer,
+  patchElementPosition
 } from "../../store/canvas/canvasSlice";
 
 import {
@@ -135,6 +136,22 @@ export const registerSocketHandlers = (): (() => void) => {
       y: payload.y
     }));
 
+  const handleElementDragged = (payload: { elementId: string; x: number; y: number }) => {
+    const stage = (window as unknown as Record<string, unknown>).__WBC_STAGE as
+      | { findOne: (selector: string) => { x: (v: number) => void; y: (v: number) => void; getLayer: () => { batchDraw: () => void } | null } | null }
+      | undefined;
+    if (stage) {
+      const node = stage.findOne(`#${payload.elementId}`);
+      if (node) {
+        node.x(payload.x);
+        node.y(payload.y);
+        node.getLayer()?.batchDraw();
+        return;
+      }
+    }
+    store.dispatch(patchElementPosition(payload));
+  };
+
   const handleUserLeft = (payload: UserLeftPayload) =>
     store.dispatch(removeCursor(payload.userId));
 
@@ -203,6 +220,7 @@ export const registerSocketHandlers = (): (() => void) => {
   socket.on("sync:conflict", handleConflict);
   socket.on("element:updated", handleUpdated);
   socket.on("element:deleted", handleDeleted);
+  socket.on("element:dragged", handleElementDragged);
   socket.on("cursor:moved", handleCursorMoved);
   socket.on("user:left", handleUserLeft);
   socket.on("layer:created", handleLayerCreated);
@@ -221,6 +239,7 @@ export const registerSocketHandlers = (): (() => void) => {
     socket.off("sync:conflict", handleConflict);
     socket.off("element:updated", handleUpdated);
     socket.off("element:deleted", handleDeleted);
+    socket.off("element:dragged", handleElementDragged);
     socket.off("cursor:moved", handleCursorMoved);
     socket.off("user:left", handleUserLeft);
     socket.off("layer:created", handleLayerCreated);

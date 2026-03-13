@@ -3,16 +3,20 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "../../store/index";
 import { setAuth, logout } from "../../store/auth/authSlice";
 import type { User } from "../../store/auth/authSlice";
+import { socket } from "../socket/socketClient";
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_API_URL,
-  credentials: "include", 
+  credentials: "include",
 
   prepareHeaders: (headers, api) => {
     const state = api.getState() as RootState;
     const token = state.auth.accessToken;
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
+    }
+    if (socket.id) {
+      headers.set("x-socket-id", socket.id);
     }
     return headers;
   }
