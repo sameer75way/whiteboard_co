@@ -15,48 +15,146 @@ import { useForm } from 'react-hook-form';
 import { FormSelect } from '../../../../components/ui/FormSelect';
 import { styled } from '@mui/material/styles';
 
-const RoleSelectBox = styled(Box)({ minWidth: 140 });
+const RoleSelectBox = styled(Box)({ minWidth: 160 });
 
-const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backdropFilter: 'blur(24px)',
+    backgroundImage: 'none',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '24px',
+    boxShadow: '0 24px 50px -12px rgba(0, 0, 0, 0.5)',
+  }
+}));
+
+const StyledDialogTitle = styled(DialogTitle)({
   margin: 0,
-  padding: theme.spacing(2),
+  padding: '24px 32px',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between'
-}));
+  justifyContent: 'space-between',
+  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+  '& .MuiTypography-root': {
+    fontWeight: 700,
+    background: 'linear-gradient(135deg, #fff 0%, #94a3b8 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  }
+});
 
-const StyledDialogContent = styled(DialogContent)({ padding: 0 });
+const StyledDialogContent = styled(DialogContent)({
+  padding: '16px 0',
+  backgroundColor: 'transparent',
+});
 
-const MemberList = styled(List)(({ theme }) => ({
+const MemberList = styled(List)({
   width: '100%',
-  backgroundColor: theme.palette.background.paper
-}));
+  backgroundColor: 'transparent',
+  padding: '8px 16px',
+});
+
+const StyledListItem = styled(ListItem)({
+  borderRadius: '16px',
+  margin: '4px 0',
+  padding: '12px 16px',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  }
+});
 
 const FlexBox = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.spacing(1)
+  gap: theme.spacing(1.5)
 }));
 
 const RoleText = styled(Typography)(({ theme }) => ({
-  padding: theme.spacing(1, 2)
+  padding: theme.spacing(0.5, 1.5),
+  borderRadius: '8px',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  color: theme.palette.text.secondary,
 }));
 
 const RoleAvatar = styled(Avatar)<{ userRole: string }>(({ theme, userRole }) => ({
-  backgroundColor: userRole === 'Owner' ? theme.palette.primary.main : theme.palette.secondary.main
+  width: 44,
+  height: 44,
+  fontSize: '1.1rem',
+  fontWeight: 700,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+  background: userRole === 'Owner' 
+    ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' 
+    : 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
+  border: '2px solid rgba(255,255,255,0.1)',
 }));
 
 const OnlineIndicator = styled(Box)<{ online?: boolean }>(({ online }) => ({
   width: 10,
   height: 10,
   borderRadius: '50%',
-  backgroundColor: online ? '#10b981' : '#6b7280',
-  boxShadow: online ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none'
+  backgroundColor: online ? '#10b981' : '#64748b',
+  border: '2px solid rgba(15, 23, 42, 0.8)',
+  position: 'relative',
+  '&::after': online ? {
+    content: '""',
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    borderRadius: '50%',
+    border: '1px solid #10b981',
+    animation: 'pulse 2s infinite',
+  } : {},
+  '@keyframes pulse': {
+    '0%': { transform: 'scale(1)', opacity: 1 },
+    '100%': { transform: 'scale(2)', opacity: 0 },
+  }
 }));
 
-const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
-  padding: theme.spacing(2)
-}));
+const StyledDialogActions = styled(DialogActions)({
+  padding: '24px 32px',
+  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+});
+
+const ActionIconButton = styled(IconButton)({
+  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.2)' }
+});
+
+const MemberName = styled(Typography)({
+  fontWeight: 600,
+  color: '#f8fafc',
+});
+
+const YouBadge = styled(Typography)({
+  color: '#818cf8',
+  fontWeight: 600,
+  marginLeft: '-4px',
+}) as typeof Typography;
+
+const MemberEmail = styled(Typography)({
+  fontSize: '0.75rem',
+  color: 'rgba(148, 163, 184, 0.7)',
+});
+
+const CloseIconButton = styled(IconButton)({
+  color: 'rgba(148, 163, 184, 0.7)',
+  '&:hover': { color: '#fff' }
+});
+
+const ModalCloseButton = styled(Button)({
+  opacity: 0.7,
+  '&:hover': { opacity: 1 }
+});
+
+const DangerButton = styled(Button)({
+  borderRadius: '12px',
+});
+
 const RoleSelectWrapper = ({ 
   member, 
   isUpdatingRole, 
@@ -140,7 +238,7 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
 
   const renderMembers = () => {
     return members.filter(m => m.status === 'Accepted').map((member) => (
-      <ListItem 
+      <StyledListItem 
         key={member._id}
         secondaryAction={
           member.role !== 'Owner' && isOwner && member.user._id !== currentUser?.id ? (
@@ -151,7 +249,7 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
                 isRemoving={isRemoving}
                 handleRoleChange={handleRoleChange}
               />
-              <IconButton 
+              <ActionIconButton 
                 size="small" 
                 color="error" 
                 onClick={() => setConfirmRemoveId(member.user._id)}
@@ -159,10 +257,10 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
                 title="Remove Member"
               >
                 <RemoveCircleOutlineIcon fontSize="small" />
-              </IconButton>
+              </ActionIconButton>
             </FlexBox>
           ) : (
-            <RoleText variant="body2" color="text.secondary">
+            <RoleText>
               {member.role === 'Owner' ? 'Owner' : member.role === 'Collaborator' ? 'Editor' : 'Viewer'}
             </RoleText>
           )
@@ -176,30 +274,35 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
         <ListItemText 
           primary={
             <FlexBox>
-              {member.user.name}
+              <MemberName variant="body1">
+                {member.user.name}
+              </MemberName>
               {member.user._id === currentUser?.id && (
-                <Typography component="span" variant="caption" color="primary">
+                <YouBadge component="span" variant="caption">
                   (You)
-                </Typography>
+                </YouBadge>
               )}
-              <Tooltip title={activeUsers.has(member.user._id) ? "Online" : "Offline"} placement="top">
+              <Tooltip title={activeUsers.has(member.user._id) ? "Online" : "Offline"} placement="top" arrow>
                 <OnlineIndicator online={activeUsers.has(member.user._id)} />
               </Tooltip>
             </FlexBox>
           } 
-          secondary={member.user.email} 
+          secondary={<MemberEmail variant="caption">{member.user.email}</MemberEmail>} 
         />
-      </ListItem>
+      </StyledListItem>
     ));
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <StyledDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <StyledDialogTitle>
         <Typography variant="h6">Manage Board Access</Typography>
-        <IconButton onClick={onClose} aria-label="close">
+        <CloseIconButton 
+          onClick={onClose} 
+          aria-label="close"
+        >
           <CloseIcon />
-        </IconButton>
+        </CloseIconButton>
       </StyledDialogTitle>
       
       <StyledDialogContent dividers>
@@ -208,25 +311,30 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
         </MemberList>
       </StyledDialogContent>
       <StyledDialogActions>
-        <Button onClick={onClose} color="inherit">
+        <ModalCloseButton onClick={onClose} color="inherit">
           Close
-        </Button>
+        </ModalCloseButton>
       </StyledDialogActions>
 
-      <Dialog open={!!confirmRemoveId} onClose={() => setConfirmRemoveId(null)}>
+      <StyledDialog open={!!confirmRemoveId} onClose={() => setConfirmRemoveId(null)}>
         <DialogTitle>Remove Member</DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText color="text.secondary">
             Are you sure you want to remove this member? They will lose access to the board immediately.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmRemoveId(null)}>Cancel</Button>
-          <Button onClick={handleRemoveMember} color="error" variant="contained" disabled={isRemoving}>
-            Remove
-          </Button>
+          <Button onClick={() => setConfirmRemoveId(null)} color="inherit">Cancel</Button>
+          <DangerButton 
+            onClick={handleRemoveMember} 
+            color="error" 
+            variant="contained" 
+            disabled={isRemoving}
+          >
+            Remove Member
+          </DangerButton>
         </DialogActions>
-      </Dialog>
-    </Dialog>
+      </StyledDialog>
+    </StyledDialog>
   );
 };
