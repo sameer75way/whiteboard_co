@@ -17,7 +17,7 @@ import { styled } from '@mui/material/styles';
 
 const RoleSelectBox = styled(Box)({ minWidth: 160 });
 
-const StyledDialog = styled(Dialog)(({ theme }) => ({
+const StyledDialog = styled(Dialog)(({  }) => ({
   '& .MuiPaper-root': {
     backgroundColor: 'rgba(15, 23, 42, 0.8)',
     backdropFilter: 'blur(24px)',
@@ -79,7 +79,7 @@ const RoleText = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-const RoleAvatar = styled(Avatar)<{ userRole: string }>(({ theme, userRole }) => ({
+const RoleAvatar = styled(Avatar)<{ userRole: string }>(({ userRole }) => ({
   width: 44,
   height: 44,
   fontSize: '1.1rem',
