@@ -6,7 +6,6 @@ import { useOfflineSync } from "../../hooks/useOfflineSync";
 import { CanvasBoard } from "./components/Canvas/CanvasBoard";
 import { Toolbar } from "./components/Toolbar/Toolbar";
 import { StylePanel } from "./components/Toolbar/StylePanel";
-import { CollaboratorCursors } from "./components/Collab/CollaboratorCursors";
 import { ConnectionStatusBar } from "./components/Sync/ConnectionStatusBar";
 import { setElements } from "../../store/canvas/canvasSlice";
 import { useGetBoardElementsQuery } from "../../services/api/elementApi";
@@ -16,6 +15,20 @@ import { WhiteboardHeader } from "./components/layout/WhiteboardHeader";
 import { WhiteboardModals } from "./components/layout/WhiteboardModals";
 import { useWhiteboardCommands } from "./hooks/useWhiteboardCommands";
 import { useWhiteboardSocket } from "./hooks/useWhiteboardSocket";
+import { styled } from '@mui/material/styles';
+
+const WhiteboardContainer = styled('div')({
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  backgroundColor: '#0f172a',
+  backgroundImage: `
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
+  `,
+  backgroundSize: '40px 40px',
+  overflow: 'hidden'
+});
 
 export const WhiteboardPage = () => {
   const { id } = useParams();
@@ -62,16 +75,24 @@ export const WhiteboardPage = () => {
     }
   }, [board]);
 
-  useEffect(() => {
+  const setupKeyboardShortcuts = useCallback(() => {
     const handleKey = (e: KeyboardEvent) => {
+      if (isViewer) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.ctrlKey && e.shiftKey && e.key === "Z") { computeStateDiffAndSync('redo'); return; }
       if (e.ctrlKey && e.key === "z") { computeStateDiffAndSync('undo'); return; }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedElementId) handleDelete();
     };
+    
     window.addEventListener("keydown", handleKey);
+    
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedElementId, handleDelete, computeStateDiffAndSync]);
+  }, [selectedElementId, handleDelete, computeStateDiffAndSync, isViewer]);
+
+  useEffect(() => {
+    const cleanup = setupKeyboardShortcuts();
+    return cleanup;
+  }, [setupKeyboardShortcuts]);
 
   const { data: elementsData } = useGetBoardElementsQuery(id!, { skip: !id });
   useEffect(() => {
@@ -80,24 +101,10 @@ export const WhiteboardPage = () => {
     }
   }, [elementsData, dispatch]);
 
-  if (!id) return null;
+  if (!id) return <div>Invalid board ID</div>;
 
   return (
-    <div
-      id="whiteboard-container"
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        backgroundColor: '#0f172a',
-        backgroundImage: `
-          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
-        `,
-        backgroundSize: '40px 40px',
-        overflow: 'hidden'
-      }}
-    >
+    <WhiteboardContainer id="whiteboard-container">
       <WhiteboardHeader 
         isOwner={isOwner} 
         onShareCode={copyShareCode}
@@ -122,9 +129,7 @@ export const WhiteboardPage = () => {
         </>
       )}
 
-      <CanvasBoard boardId={id} />
-
-      <CollaboratorCursors />
+      <CanvasBoard boardId={id} isViewer={isViewer} />
 
       <ConnectionStatusBar />
 
@@ -140,6 +145,6 @@ export const WhiteboardPage = () => {
         isOwner={isOwner}
         refetchBoard={refetchBoard}
       />
-    </div>
+    </WhiteboardContainer>
   );
 };

@@ -1,5 +1,5 @@
 export interface BoardMember {
-  _id: string; // The ID of the membership record
+  _id: string; 
   user: {
     _id: string;
     name: string;

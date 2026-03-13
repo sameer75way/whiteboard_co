@@ -44,6 +44,30 @@ const HeaderSection = styled(Box)({
   gap: '0.5rem',
 });
 
+const LoaderContainer = styled(PageContainer)({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center'
+});
+
+const StyledCircularProgress = styled(CircularProgress)({
+  color: '#818cf8'
+});
+
+const ErrorAlert = styled(Alert)({
+  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  color: '#ef4444'
+});
+
+const Title = styled(Typography)(({ theme }) => ({
+  fontWeight: 800,
+  color: theme.palette.text.primary
+}));
+
+const Subtitle = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary
+}));
+
 export const AdminUsersPage = () => {
   const { data: usersData, isLoading: isUsersLoading, error: usersError } = useGetAllUsersQuery(undefined);
   const { data: boardsData, isLoading: isBoardsLoading, error: boardsError } = useGetAllBoardsQuery(undefined);
@@ -53,9 +77,9 @@ export const AdminUsersPage = () => {
 
   if (isLoading) {
     return (
-      <PageContainer sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <CircularProgress sx={{ color: '#818cf8' }} size={60} />
-      </PageContainer>
+      <LoaderContainer>
+        <StyledCircularProgress size={60} />
+      </LoaderContainer>
     );
   }
 
@@ -63,9 +87,9 @@ export const AdminUsersPage = () => {
     return (
       <PageContainer>
         <ContentWrapper>
-          <Alert severity="error" sx={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+          <ErrorAlert severity="error">
             Failed to load admin data. Ensure you have the correct permissions.
-          </Alert>
+          </ErrorAlert>
         </ContentWrapper>
       </PageContainer>
     );
@@ -78,12 +102,12 @@ export const AdminUsersPage = () => {
     <PageContainer>
       <ContentWrapper>
         <HeaderSection>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: "text.primary" }}>
+          <Title variant="h4">
             Admin Control Panel
-          </Typography>
-          <Typography variant="subtitle1" sx={{ color: "text.secondary" }}>
+          </Title>
+          <Subtitle variant="subtitle1">
             Manage all registered users and their whiteboard associations.
-          </Typography>
+          </Subtitle>
         </HeaderSection>
         
         <UserList users={users} boards={boards} />

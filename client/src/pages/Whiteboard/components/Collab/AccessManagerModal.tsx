@@ -4,13 +4,87 @@ import { socket } from '../../../../services/socket/socketClient';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, Button, 
   List, ListItem, ListItemAvatar, ListItemText, Avatar, 
-  Select, MenuItem, Typography, IconButton, Box, DialogContentText, Tooltip
+  Typography, IconButton, Box, DialogContentText, Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import { useUpdateRoleMutation, useRemoveMemberMutation } from '../../../../services/api/boardApi';
 import type { RootState } from '../../../../store/index';
 import type { BoardMember } from '../../../../types/board.types';
+import { useForm } from 'react-hook-form';
+import { FormSelect } from '../../../../components/ui/FormSelect';
+import { styled } from '@mui/material/styles';
+
+const RoleSelectBox = styled(Box)({ minWidth: 140 });
+
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  margin: 0,
+  padding: theme.spacing(2),
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between'
+}));
+
+const StyledDialogContent = styled(DialogContent)({ padding: 0 });
+
+const MemberList = styled(List)(({ theme }) => ({
+  width: '100%',
+  backgroundColor: theme.palette.background.paper
+}));
+
+const FlexBox = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1)
+}));
+
+const RoleText = styled(Typography)(({ theme }) => ({
+  padding: theme.spacing(1, 2)
+}));
+
+const RoleAvatar = styled(Avatar)<{ userRole: string }>(({ theme, userRole }) => ({
+  backgroundColor: userRole === 'Owner' ? theme.palette.primary.main : theme.palette.secondary.main
+}));
+
+const OnlineIndicator = styled(Box)<{ online?: boolean }>(({ online }) => ({
+  width: 10,
+  height: 10,
+  borderRadius: '50%',
+  backgroundColor: online ? '#10b981' : '#6b7280',
+  boxShadow: online ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none'
+}));
+
+const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
+  padding: theme.spacing(2)
+}));
+const RoleSelectWrapper = ({ 
+  member, 
+  isUpdatingRole, 
+  isRemoving, 
+  handleRoleChange 
+}: { 
+  member: BoardMember; 
+  isUpdatingRole: boolean; 
+  isRemoving: boolean; 
+  handleRoleChange: (userId: string, role: string) => void;
+}) => {
+  const { control } = useForm({ defaultValues: { role: member.role } });
+
+  return (
+    <RoleSelectBox>
+      <FormSelect
+        name="role"
+        control={control}
+        options={[
+          { value: "Collaborator", label: "Editor" },
+          { value: "Viewer", label: "Viewer" }
+        ]}
+        isDisabled={isUpdatingRole || isRemoving}
+        onChangeCallback={(val) => val && handleRoleChange(member.user._id, val)}
+      />
+    </RoleSelectBox>
+  );
+};
 
 interface AccessManagerModalProps {
   open: boolean;
@@ -64,88 +138,80 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
     }
   };
 
+  const renderMembers = () => {
+    return members.filter(m => m.status === 'Accepted').map((member) => (
+      <ListItem 
+        key={member._id}
+        secondaryAction={
+          member.role !== 'Owner' && isOwner && member.user._id !== currentUser?.id ? (
+            <FlexBox>
+              <RoleSelectWrapper
+                member={member}
+                isUpdatingRole={isUpdatingRole}
+                isRemoving={isRemoving}
+                handleRoleChange={handleRoleChange}
+              />
+              <IconButton 
+                size="small" 
+                color="error" 
+                onClick={() => setConfirmRemoveId(member.user._id)}
+                disabled={isUpdatingRole || isRemoving}
+                title="Remove Member"
+              >
+                <RemoveCircleOutlineIcon fontSize="small" />
+              </IconButton>
+            </FlexBox>
+          ) : (
+            <RoleText variant="body2" color="text.secondary">
+              {member.role === 'Owner' ? 'Owner' : member.role === 'Collaborator' ? 'Editor' : 'Viewer'}
+            </RoleText>
+          )
+        }
+      >
+        <ListItemAvatar>
+          <RoleAvatar userRole={member.role}>
+            {member.user.name.charAt(0).toUpperCase()}
+          </RoleAvatar>
+        </ListItemAvatar>
+        <ListItemText 
+          primary={
+            <FlexBox>
+              {member.user.name}
+              {member.user._id === currentUser?.id && (
+                <Typography component="span" variant="caption" color="primary">
+                  (You)
+                </Typography>
+              )}
+              <Tooltip title={activeUsers.has(member.user._id) ? "Online" : "Offline"} placement="top">
+                <OnlineIndicator online={activeUsers.has(member.user._id)} />
+              </Tooltip>
+            </FlexBox>
+          } 
+          secondary={member.user.email} 
+        />
+      </ListItem>
+    ));
+  };
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <StyledDialogTitle>
         <Typography variant="h6">Manage Board Access</Typography>
         <IconButton onClick={onClose} aria-label="close">
           <CloseIcon />
         </IconButton>
-      </DialogTitle>
+      </StyledDialogTitle>
       
-      <DialogContent dividers sx={{ p: 0 }}>
-        <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-          {members.filter(m => m.status === 'Accepted').map((member) => (
-            <ListItem 
-              key={member._id}
-              secondaryAction={
-                member.role !== 'Owner' && isOwner && member.user._id !== currentUser?.id ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Select
-                      size="small"
-                      value={member.role}
-                      onChange={(e) => handleRoleChange(member.user._id, e.target.value)}
-                      disabled={isUpdatingRole || isRemoving}
-                      sx={{ minWidth: 120 }}
-                    >
-                      <MenuItem value="Collaborator">Editor</MenuItem>
-                      <MenuItem value="Viewer">Viewer</MenuItem>
-                    </Select>
-                    <IconButton 
-                      size="small" 
-                      color="error" 
-                      onClick={() => setConfirmRemoveId(member.user._id)}
-                      disabled={isUpdatingRole || isRemoving}
-                      title="Remove Member"
-                    >
-                      <RemoveCircleOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 1, px: 2 }}>
-                    {member.role === 'Owner' ? 'Owner' : member.role === 'Collaborator' ? 'Editor' : 'Viewer'}
-                  </Typography>
-                )
-              }
-            >
-              <ListItemAvatar>
-                <Avatar sx={{ bgcolor: member.role === 'Owner' ? 'primary.main' : 'secondary.main' }}>
-                  {member.user.name.charAt(0).toUpperCase()}
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText 
-                primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {member.user.name}
-                    {member.user._id === currentUser?.id && (
-                      <Typography component="span" variant="caption" color="primary">
-                        (You)
-                      </Typography>
-                    )}
-                    <Tooltip title={activeUsers.has(member.user._id) ? "Online" : "Offline"} placement="top">
-                      <Box 
-                        sx={{ 
-                          width: 10, 
-                          height: 10, 
-                          borderRadius: '50%', 
-                          bgcolor: activeUsers.has(member.user._id) ? '#10b981' : '#6b7280',
-                          boxShadow: activeUsers.has(member.user._id) ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none'
-                        }} 
-                      />
-                    </Tooltip>
-                  </Box>
-                } 
-                secondary={member.user.email} 
-              />
-            </ListItem>
-          ))}
-        </List>
-      </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
+      <StyledDialogContent dividers>
+        <MemberList>
+          {renderMembers()}
+        </MemberList>
+      </StyledDialogContent>
+      <StyledDialogActions>
         <Button onClick={onClose} color="inherit">
           Close
         </Button>
-      </DialogActions>
+      </StyledDialogActions>
 
       <Dialog open={!!confirmRemoveId} onClose={() => setConfirmRemoveId(null)}>
         <DialogTitle>Remove Member</DialogTitle>

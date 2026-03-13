@@ -9,7 +9,7 @@ import {
   createTriangleElement,
   createLineElement
 } from "../../../lib/utils/canvas.utils";
-import { addElement, deleteElement, undo, redo } from "../../../store/canvas/canvasSlice";
+import { addElement, deleteElement, undo, redo, selectElement } from "../../../store/canvas/canvasSlice";
 import { socket } from "../../../services/socket/socketClient";
 import { db } from "../../../services/offline/offlineDB";
 import { nextLamport } from "../../../lib/utils/crdt";
@@ -31,6 +31,7 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     const elementWithTs = { ...element, lamportTs, zIndex: maxZ + 1 };
     
     dispatch(addElement(elementWithTs));
+    dispatch(selectElement(elementWithTs._id));
     if (navigator.onLine) {
       socket.emit("element:create", { boardId, element: elementWithTs });
     } else {

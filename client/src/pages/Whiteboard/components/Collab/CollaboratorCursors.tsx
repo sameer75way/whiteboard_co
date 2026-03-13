@@ -1,69 +1,68 @@
-import { useMemo } from "react";
+import { Group, Path, Text, Rect } from "react-konva";
 import { useSelector } from "react-redux";
 import type { Cursor } from "../../../../store/collaboration/collabSlice";
 import type { RootState } from "../../../../store/index";
 
-export const CollaboratorCursors = () => {
+interface Props {
+  currentScale: number;
+}
 
+export const CollaboratorCursors = ({ currentScale }: Props) => {
   const cursors = useSelector(
     (state: RootState) => state.collaboration.cursors
   );
 
-  const cursorList = useMemo(() => Object.values(cursors) as Cursor[], [cursors]);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+
+  const cursorList = Object.values(cursors).filter(
+    (c: Cursor) => c.userId !== currentUser?.id
+  ) as Cursor[];
+
+  const inverseScale = 1 / currentScale;
 
   return (
-    <>
+    <Group listening={false} id="collaborator-cursors">
       {cursorList.map((cursor) => (
-        <div
+        <Group
           key={cursor.userId}
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            pointerEvents: "none",
-            zIndex: 999,
-            transform: `translate(${cursor.x - 2}px, ${cursor.y - 2}px)`,
-            transition: "transform 0.05s linear",
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-          }}
+          x={cursor.x}
+          y={cursor.y}
+          scaleX={inverseScale}
+          scaleY={inverseScale}
+          listening={false}
         >
-          <svg
-            width="24"
-            height="36"
-            viewBox="0 0 24 36"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ filter: "drop-shadow(0px 2px 4px rgba(0,0,0,0.5))" }}
-          >
-            <path
-              d="M5.65376 33.1598L0.126435 0.505295C0.0210287 -0.117497 0.697505 -0.320708 1.05388 0.222883L18.4411 26.7828C18.7758 27.2941 18.2573 27.9158 17.6537 27.7262L11.5163 25.808C11.1614 25.697 10.7711 25.7954 10.5106 26.0617L6.82485 29.8291C6.27303 30.3932 5.37829 29.9806 5.56475 29.213L5.65376 33.1598Z"
+          <Path
+            data="M0,0 L0,18 L4.5,13.5 L9.5,23.5 L12.5,22 L7.5,12 L13.5,12 Z"
+            fill="#10b981"
+            stroke="white"
+            strokeWidth={1.5}
+            scaleX={1.2}
+            scaleY={1.2}
+            shadowColor="rgba(0,0,0,0.5)"
+            shadowBlur={4}
+            shadowOffsetY={2}
+          />
+          
+          <Group x={15} y={15}>
+            <Rect
+              width={(cursor.name || 'User').length * 7 + 16}
+              height={22}
               fill="#10b981"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinejoin="round"
+              cornerRadius={6}
+              shadowColor="rgba(0,0,0,0.3)"
+              shadowBlur={4}
+              shadowOffsetY={1}
             />
-          </svg>
-          <div
-            style={{
-              background: '#10b981',
-              color: 'white',
-              padding: '4px 8px',
-              borderRadius: '8px',
-              fontSize: '11px',
-              fontWeight: 600,
-              marginTop: '4px',
-              marginLeft: '14px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {cursor.name || 'User'}
-          </div>
-        </div>
+            <Text
+              text={cursor.name || 'User'}
+              fill="white"
+              fontSize={11}
+              fontStyle="bold"
+              padding={6}
+            />
+          </Group>
+        </Group>
       ))}
-    </>
+    </Group>
   );
-
 };

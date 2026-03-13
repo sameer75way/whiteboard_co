@@ -1,16 +1,6 @@
 import mongoose from "mongoose";
-
-export type ElementType =
-  | "rectangle"
-  | "circle"
-  | "line"
-  | "arrow"
-  | "text"
-  | "pencil"
-  | "image"
-  | "sticky"
-  | "triangle"
-  | "line";
+import { ElementType, LamportTimestamp } from "../../common/types/element.types";
+export { ElementType, LamportTimestamp };
 
 interface Position {
   x: number;
@@ -28,11 +18,6 @@ interface Style {
   strokeWidth: number;
   opacity: number;
   fontSize?: number;
-}
-
-export interface LamportTimestamp {
-  clientId: string;
-  seq: number;
 }
 
 export interface IElement {

@@ -89,6 +89,20 @@ const FooterBox = styled('div')(({ theme }) => ({
   marginTop: '1rem',
 }));
 
+const ErrorText = styled('div')(({ theme }) => ({
+  color: theme.palette.error.main,
+  marginTop: '0.5rem',
+  fontSize: '0.9rem'
+}));
+
+const SubmitButton = styled(Button)({
+  marginTop: '0.5rem'
+});
+
+const LinkButton = styled(TextButton)({
+  padding: 0
+});
+
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
@@ -120,9 +134,9 @@ export const ForgotPasswordPage = () => {
         <HeaderBox>
           <Title>Reset Password</Title>
           <Subtitle>Enter your email and we'll send you a reset link.</Subtitle>
-          {error && <div style={{ color: '#ef4444', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+          {error && <ErrorText>
             {error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'message' in error.data ? (error.data as {message: string}).message : 'Something went wrong.'}
-          </div>}
+          </ErrorText>}
         </HeaderBox>
 
         {submitted ? (
@@ -139,17 +153,17 @@ export const ForgotPasswordPage = () => {
               error={!!formErrors.email}
               helperText={formErrors.email?.message}
             />
-            <Button type="submit" disabled={isLoading} style={{ marginTop: '0.5rem' }}>
+            <SubmitButton type="submit" disabled={isLoading}>
               {isLoading ? 'Sending...' : 'Send Reset Link'}
-            </Button>
+            </SubmitButton>
           </Form>
         )}
 
         <FooterBox>
           Remember your password?{' '}
-          <TextButton onClick={() => navigate('/login')} style={{ padding: 0 }}>
+          <LinkButton onClick={() => navigate('/login')}>
             Log in
-          </TextButton>
+          </LinkButton>
         </FooterBox>
       </AuthCard>
     </PageContainer>

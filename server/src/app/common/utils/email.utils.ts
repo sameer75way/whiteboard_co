@@ -1,10 +1,13 @@
 import nodemailer from 'nodemailer';
+import ejs from 'ejs';
+import path from 'path';
 import { env } from '../config/env.config';
 
 interface EmailOptions {
   email: string;
   subject: string;
-  message: string;
+  template: string;
+  data: Record<string, string | number | boolean>;
 }
 
 export const sendEmail = async (options: EmailOptions) => {
@@ -17,11 +20,14 @@ export const sendEmail = async (options: EmailOptions) => {
     },
   });
 
+  const templatePath = path.join(__dirname, '../email/templates', `${options.template}.ejs`);
+  const html = await ejs.renderFile(templatePath, options.data);
+
   const message = {
     from: `${env.FROM_NAME} <${env.SMTP_USER || env.FROM_EMAIL}>`,
     to: options.email,
     subject: options.subject,
-    text: options.message,
+    html,
   };
 
   const info = await transporter.sendMail(message);

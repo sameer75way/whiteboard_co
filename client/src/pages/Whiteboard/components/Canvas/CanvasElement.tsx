@@ -2,37 +2,33 @@ import { Group, Rect, Circle, Text, RegularPolygon, Line } from "react-konva";
 import { type KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
 import { store } from "../../../../store/index";
-
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, type RefObject } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../../store/index";
-
 import { db } from "../../../../services/offline/offlineDB";
-
 import {
   updateElement,
   selectElement
 } from "../../../../store/canvas/canvasSlice";
-
 import type { CanvasElement as Element } from "../../../../types/element.types";
-
 import { socket } from "../../../../services/socket/socketClient";
 import { nextLamport } from "../../../../lib/utils/crdt";
 
 interface Props {
   element: Element;
   boardId: string;
+  isViewer?: boolean;
   onEditText?: (elementId: string, currentText: string, pos: { x: number; y: number; width: number }) => void;
 }
 
-export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
-
+export const CanvasElement = ({ element, boardId, isViewer, onEditText }: Props) => {
   const dispatch = useDispatch();
   const userName = useSelector((state: RootState) => state.auth.user?.name) || "User";
   const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group | Konva.RegularPolygon | Konva.Line>(null);
   const lastCursorEmitRef = useRef<number>(0);
 
   const broadcastUpdate = useCallback(async (updated: Element) => {
+    if (isViewer) return;
     const lamportTs = nextLamport();
     const elementWithTs = { ...updated, lamportTs };
     dispatch(updateElement(elementWithTs));
@@ -52,43 +48,33 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         lamportTs
       });
     }
-  }, [boardId, element._id, element.boardId, element.version, dispatch]);
+  }, [boardId, element._id, element.boardId, element.version, dispatch, isViewer]);
 
   const handlePress = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+    if (isViewer) return;
     e.cancelBubble = true;
-    
-    e.currentTarget.moveToTop();
-    
     const allElements = Object.values(store.getState().canvas.elements) as Element[];
     const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
-    
     broadcastUpdate({
       ...element,
       zIndex: maxZ + 1,
       version: element.version + 1
     });
-    
     dispatch(selectElement(element._id));
-    
     const layer = e.currentTarget.getLayer();
     if (layer) layer.batchDraw();
-  }, [dispatch, element, broadcastUpdate]);
+  }, [dispatch, element, broadcastUpdate, isViewer]);
 
   const handleDragStart = useCallback((e: KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
-    e.currentTarget.moveToTop();
-
     const allElements = Object.values(store.getState().canvas.elements) as Element[];
     const maxZ = allElements.length > 0 ? Math.max(...allElements.map(el => el.zIndex || 0)) : 0;
-
     broadcastUpdate({
       ...element,
       zIndex: maxZ + 1,
       version: element.version + 1
     });
-
     dispatch(selectElement(element._id));
-    
     const layer = e.currentTarget.getLayer();
     if (layer) layer.batchDraw();
   }, [dispatch, element, broadcastUpdate]);
@@ -108,7 +94,6 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
       const now = Date.now();
       if (now - lastCursorEmitRef.current >= 32) {
         lastCursorEmitRef.current = now;
-        
         socket.emit("element:update", {
           boardId,
           elementId: element._id,
@@ -117,15 +102,16 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
             position: { x: node.x(), y: node.y() }
           }
         });
-
         const stage = node.getStage();
         if (stage) {
           const pointer = stage.getPointerPosition();
           if (pointer) {
+            const transform = stage.getAbsoluteTransform().copy().invert();
+            const worldPos = transform.point(pointer);
             socket.emit("cursor:move", {
               boardId,
-              x: pointer.x,
-              y: pointer.y,
+              x: worldPos.x,
+              y: worldPos.y,
               name: userName
             });
           }
@@ -137,16 +123,12 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   const handleTransformEnd = useCallback(() => {
     const node = shapeRef.current;
     if (!node) return;
-
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
-
     node.scaleX(1);
     node.scaleY(1);
-
     let newWidth = element.dimensions.width;
     let newHeight = element.dimensions.height;
-
     if (element.type === "circle") {
       const radius = element.dimensions.width / 2;
       newWidth = Math.max(20, radius * 2 * scaleX);
@@ -155,7 +137,6 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
       newWidth = Math.max(20, node.width() * scaleX);
       newHeight = Math.max(20, node.height() * scaleY);
     }
-
     broadcastUpdate({
       ...element,
       position: { x: node.x(), y: node.y() },
@@ -168,13 +149,10 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   const handleTransform = useCallback(() => {
     const node = shapeRef.current;
     if (!node || !navigator.onLine) return;
-
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
-    
     let newWidth = element.dimensions.width;
     let newHeight = element.dimensions.height;
-
     if (element.type === "circle") {
       const radius = element.dimensions.width / 2;
       newWidth = Math.max(20, radius * 2 * scaleX);
@@ -183,11 +161,9 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
       newWidth = Math.max(20, node.width() * scaleX);
       newHeight = Math.max(20, node.height() * scaleY);
     }
-
     const now = Date.now();
     if (now - lastCursorEmitRef.current >= 32) {
       lastCursorEmitRef.current = now;
-
       socket.emit("element:update", {
         boardId,
         elementId: element._id,
@@ -198,15 +174,16 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
           rotation: node.rotation()
         }
       });
-
       const stage = node.getStage();
       if (stage) {
         const pointer = stage.getPointerPosition();
         if (pointer) {
+          const transform = stage.getAbsoluteTransform().copy().invert();
+          const worldPos = transform.point(pointer);
           socket.emit("cursor:move", {
             boardId,
-            x: pointer.x,
-            y: pointer.y,
+            x: worldPos.x,
+            y: worldPos.y,
             name: userName
           });
         }
@@ -215,26 +192,23 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   }, [boardId, element, userName]);
 
   const handleDblClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-    if (!onEditText) return;
+    if (isViewer || !onEditText) return;
     const stage = e.target.getStage();
     if (!stage) return;
-
     const textNode = e.target;
     const absPos = textNode.getAbsolutePosition();
     const stageBox = stage.container().getBoundingClientRect();
-
     onEditText(element._id, element.content || "", {
       x: stageBox.left + absPos.x,
       y: stageBox.top + absPos.y,
       width: (element.dimensions?.width || 200) * stage.scaleX()
     });
-  }, [onEditText, element._id, element.content, element.dimensions?.width]);
-
+  }, [onEditText, element._id, element.content, element.dimensions?.width, isViewer]);
 
   if (element.type === "rectangle") {
     return (
       <Rect
-        ref={shapeRef as React.RefObject<Konva.Rect>}
+        ref={shapeRef as RefObject<Konva.Rect>}
         id={element._id}
         x={element.position.x}
         y={element.position.y}
@@ -245,7 +219,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable
+        draggable={!isViewer}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -260,7 +234,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   if (element.type === "circle") {
     return (
       <Circle
-        ref={shapeRef as React.RefObject<Konva.Circle>}
+        ref={shapeRef as RefObject<Konva.Circle>}
         id={element._id}
         x={element.position.x}
         y={element.position.y}
@@ -270,7 +244,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable
+        draggable={!isViewer}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -285,7 +259,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   if (element.type === "text") {
     return (
       <Text
-        ref={shapeRef as React.RefObject<Konva.Text>}
+        ref={shapeRef as RefObject<Konva.Text>}
         id={element._id}
         x={element.position.x}
         y={element.position.y}
@@ -294,7 +268,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         fill={element.style.fill}
         width={element.dimensions.width}
         rotation={element.rotation || 0}
-        draggable
+        draggable={!isViewer}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDblClick={handleDblClick}
@@ -311,14 +285,14 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   if (element.type === "sticky") {
     return (
       <Group
-        ref={shapeRef as React.RefObject<Konva.Group>}
+        ref={shapeRef as RefObject<Konva.Group>}
         id={element._id}
         x={element.position.x}
         y={element.position.y}
         width={element.dimensions.width}
         height={element.dimensions.height}
         rotation={element.rotation || 0}
-        draggable
+        draggable={!isViewer}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -358,7 +332,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   if (element.type === "triangle") {
     return (
       <RegularPolygon
-        ref={shapeRef as React.RefObject<Konva.RegularPolygon>}
+        ref={shapeRef as RefObject<Konva.RegularPolygon>}
         id={element._id}
         x={element.position.x}
         y={element.position.y}
@@ -369,7 +343,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable
+        draggable={!isViewer}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}
@@ -384,7 +358,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
   if (element.type === "line") {
     return (
       <Line
-        ref={shapeRef as React.RefObject<Konva.Line>}
+        ref={shapeRef as RefObject<Konva.Line>}
         id={element._id}
         x={element.position.x}
         y={element.position.y}
@@ -393,7 +367,7 @@ export const CanvasElement = ({ element, boardId, onEditText }: Props) => {
         stroke={element.style.stroke}
         strokeWidth={element.style.strokeWidth}
         opacity={element.style.opacity}
-        draggable
+        draggable={!isViewer}
         hitStrokeWidth={Math.max(20, element.style.strokeWidth)}
         onMouseDown={handlePress}
         onTouchStart={handlePress}

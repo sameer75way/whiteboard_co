@@ -20,23 +20,15 @@ const collabSlice = createSlice({
   initialState,
 
   reducers: {
-
     updateCursor: (state, action: PayloadAction<Cursor>) => {
-
       const cursor = action.payload;
-
       state.cursors[cursor.userId] = cursor;
-
     },
 
     removeCursor: (state, action: PayloadAction<string>) => {
-
       delete state.cursors[action.payload];
-
     }
-
   }
-
 });
 
 export const {

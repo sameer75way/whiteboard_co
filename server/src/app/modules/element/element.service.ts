@@ -6,8 +6,12 @@ import { isNewer } from "../../common/utils/crdt.utils";
 export const createElement = async (
   boardId: string,
   userId: string,
+  userRole: string,
   payload: Partial<IElement>
 ) => {
+  if (userRole === "Viewer") {
+    throw new AppError("Forbidden: Viewers cannot create elements", 403);
+  }
 
   const element = await ElementModel.create({
     ...payload,
@@ -32,9 +36,13 @@ export const getBoardElements = async (boardId: string) => {
 export const updateElement = async (
   elementId: string,
   userId: string,
+  userRole: string,
   payload: Partial<IElement>,
   incomingTs?: LamportTimestamp
 ): Promise<{ element: IElement; accepted: boolean }> => {
+  if (userRole === "Viewer") {
+    throw new AppError("Forbidden: Viewers cannot update elements", 403);
+  }
 
   const element = await ElementModel.findById(elementId);
 
@@ -67,8 +75,13 @@ export const updateElement = async (
 };
 
 export const deleteElement = async (
-  elementId: string
+  elementId: string,
+  userId: string,
+  userRole: string
 ) => {
+  if (userRole === "Viewer") {
+    throw new AppError("Forbidden: Viewers cannot delete elements", 403);
+  }
 
   const element = await ElementModel.findById(elementId);
 

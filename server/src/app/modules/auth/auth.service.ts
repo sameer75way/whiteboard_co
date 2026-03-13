@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import { UserModel } from "./auth.model";
 import { hashPassword, comparePassword } from "../../common/utils/password.utils";
-import { signAccessToken, signRefreshToken } from "../../common/utils/jwt.utils";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../../common/utils/jwt.utils";
 import { RefreshTokenModel } from "../token/refreshToken.model";
 import { AppError } from "../../common/middlewares/errorHandler";
 
@@ -120,4 +120,37 @@ export const resetPassword = async (resetToken: string, newPassword: string) => 
 
 export const getAllUsers = async () => {
   return await UserModel.find().select("-password -__v -resetPasswordToken -resetPasswordExpire").lean();
+};
+
+export const getUserProfile = async (userId: string) => {
+  return await UserModel.findById(userId).select("-password");
+};
+
+export const refreshAuthTokens = async (refreshToken: string) => {
+  const decoded = verifyRefreshToken(refreshToken) as { id: string };
+
+  const storedToken = await RefreshTokenModel.findOne({ 
+    token: refreshToken, 
+    userId: decoded.id,
+    isRevoked: false,
+    expiresAt: { $gt: new Date() }
+  });
+
+  if (!storedToken) {
+    throw new AppError("Refresh token is invalid or expired", 401);
+  }
+
+  storedToken.isRevoked = true;
+  await storedToken.save();
+
+  const newAccessToken = signAccessToken({ id: decoded.id });
+  const newRefreshToken = signRefreshToken({ id: decoded.id });
+
+  await RefreshTokenModel.create({
+    userId: decoded.id,
+    token: newRefreshToken,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  });
+
+  return { newAccessToken, newRefreshToken };
 };

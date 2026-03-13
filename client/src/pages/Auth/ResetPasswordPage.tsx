@@ -73,6 +73,16 @@ const Form = styled('form')({
   gap: '1.25rem',
 });
 
+const ErrorText = styled('div')(({ theme }) => ({
+  color: theme.palette.error.main,
+  marginTop: '0.5rem',
+  fontSize: '0.9rem'
+}));
+
+const SubmitButton = styled(Button)({
+  marginTop: '0.5rem'
+});
+
 const resetPasswordSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string()
@@ -117,7 +127,7 @@ export const ResetPasswordPage = () => {
         <HeaderBox>
           <Title>Create New Password</Title>
           <Subtitle>Your new password must be different from previous used passwords.</Subtitle>
-          {error && <div style={{ color: '#ef4444', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+          {error && <ErrorText>
             {(() => {
               if (typeof error !== 'object' || !error) return 'Something went wrong.';
               if ('data' in error) {
@@ -129,7 +139,7 @@ export const ResetPasswordPage = () => {
               }
               return 'Invalid or expired token.';
             })()}
-          </div>}
+          </ErrorText>}
         </HeaderBox>
 
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -149,9 +159,9 @@ export const ResetPasswordPage = () => {
             error={!!formErrors.confirmPassword}
             helperText={formErrors.confirmPassword?.message}
           />
-          <Button type="submit" disabled={isLoading} style={{ marginTop: '0.5rem' }}>
+          <SubmitButton type="submit" disabled={isLoading}>
             {isLoading ? 'Resetting...' : 'Reset Password'}
-          </Button>
+          </SubmitButton>
         </Form>
       </AuthCard>
     </PageContainer>

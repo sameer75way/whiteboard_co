@@ -16,7 +16,9 @@ interface Props {
   members: { user: string | { _id: string }; role: string }[];
 }
 
-const CardWrapper = styled(Card)({
+const CardWrapper = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'isDeleting',
+})<{ isDeleting?: boolean }>(({ isDeleting }) => ({
   cursor: "pointer",
   height: 130,
   display: "flex",
@@ -25,11 +27,12 @@ const CardWrapper = styled(Card)({
   justifyContent: "space-between",
   padding: "1.25rem 1.5rem",
   transition: "all 0.3s ease",
+  opacity: isDeleting ? 0.5 : 1,
   "&:hover": {
     transform: "translateY(-3px)",
     boxShadow: "0 12px 24px rgba(0,0,0,0.3)",
   }
-});
+}));
 
 const BoardName = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
@@ -58,6 +61,24 @@ const CopyButton = styled(IconButton)(({ theme }) => ({
 const CopyIcon = styled(ContentCopyIcon)({
   fontSize: 14
 });
+
+const CardHeader = styled(Box)({
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start'
+});
+
+const RoleBadgeContainer = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(1)
+}));
+
+const DeleteButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.error.main,
+  opacity: 0,
+  transition: 'opacity 0.2s',
+  '.MuiCard-root:hover &': { opacity: 1 }
+}));
 
 const RoleBadge = styled(Box)<{ role: string }>(({ role }) => ({
   display: 'inline-flex',
@@ -132,36 +153,30 @@ export const BoardCard = ({ id, name, shareCode, members }: Props) => {
   };
 
   return (
-    <CardWrapper onClick={openBoard} sx={{ opacity: isDeleting ? 0.5 : 1 }}>
-      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <CardWrapper onClick={openBoard} isDeleting={isDeleting}>
+      <CardHeader>
         <Box>
           <BoardName>
             {name}
           </BoardName>
-          <Box sx={{ mt: 1 }}>
+          <RoleBadgeContainer>
             <RoleBadge role={role}>
               {roleLabel.toUpperCase()}
             </RoleBadge>
-          </Box>
+          </RoleBadgeContainer>
         </Box>
         {role === 'Owner' && (
           <Tooltip title="Delete Board" placement="top">
-            <IconButton 
+            <DeleteButton 
               size="small" 
               onClick={handleDeleteClick}
               disabled={isDeleting}
-              sx={{ 
-                color: 'error.main', 
-                opacity: 0, 
-                transition: 'opacity 0.2s',
-                '.MuiCard-root:hover &': { opacity: 1 } 
-              }}
             >
               <DeleteIcon fontSize="small" />
-            </IconButton>
+            </DeleteButton>
           </Tooltip>
         )}
-      </Box>
+      </CardHeader>
       {role === 'Owner' && shareCode && (
         <ShareContainer>
           <ShareText>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Box, Typography, Divider, Slider } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,6 +7,8 @@ import { updateElement } from "../../../../store/canvas/canvasSlice";
 import { socket } from "../../../../services/socket/socketClient";
 import { db } from "../../../../services/offline/offlineDB";
 import { nextLamport } from "../../../../lib/utils/crdt";
+import { StyleIcon } from "../../../../assets/svg/StyleIcon";
+import { CloseSvgIcon } from "../../../../assets/svg/CloseSvgIcon";
 
 const PanelContainer = styled(Box)({
   position: "absolute",
@@ -22,8 +25,8 @@ const PanelContainer = styled(Box)({
   borderRadius: "16px",
   padding: "16px",
   boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-  zIndex: 100,
   color: "#f8fafc",
+  zIndex: 100
 });
 
 const SectionTitle = styled(Typography)({
@@ -65,6 +68,61 @@ const ColorButton = styled("button")<{ $color: string; $selected: boolean; $isTr
   })
 );
 
+const ClosedPanelContainer = styled(Box)({
+  position: "absolute",
+  top: 80,
+  right: 16,
+  zIndex: 100,
+});
+
+const ToggleButton = styled(Box)({
+  width: 48,
+  height: 48,
+  borderRadius: "12px",
+  background: "rgba(15, 23, 42, 0.85)",
+  backdropFilter: "blur(16px)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  color: "#6366f1",
+  boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+  transition: "all 0.2s ease-in-out",
+  "&:hover": {
+    transform: "scale(1.05)",
+    background: "rgba(15, 23, 42, 0.95)",
+    borderColor: "rgba(99, 102, 241, 0.4)",
+  }
+});
+
+const TitleNoMargin = styled(SectionTitle)({
+  marginBottom: 0
+});
+
+const CloseButton = styled(Box)({
+  cursor: "pointer",
+  color: "#94a3b8",
+  "&:hover": { color: "#fff" }
+});
+
+const StyledDivider = styled(Divider)({
+  borderColor: "rgba(255,255,255,0.08)"
+});
+
+const StyledSlider = styled(Slider)({
+  color: "#6366f1"
+});
+
+const StrokeWidthButton = styled('button')<{ $selected: boolean }>(({ $selected }) => ({
+  background: $selected ? "rgba(99,102,241,0.25)" : "transparent",
+  border: "1px solid rgba(255,255,255,0.2)",
+  color: $selected ? "#a5b4fc" : "#cbd5e1",
+  borderRadius: "4px",
+  padding: "2px 8px",
+  cursor: "pointer",
+}));
+
 const PRESET_COLORS = [
   "transparent",
   "#ffffff",
@@ -90,7 +148,10 @@ export const StylePanel = ({ boardId }: { boardId: string }) => {
   const selectedElementId = useSelector((state: RootState) => state.canvas.selectedElementId);
   const elements = useSelector((state: RootState) => state.canvas.elements);
   
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   const element = selectedElementId ? elements[selectedElementId] : null;
+
 
   if (!element) return null;
 
@@ -123,8 +184,25 @@ export const StylePanel = ({ boardId }: { boardId: string }) => {
     }
   };
 
+  if (!isExpanded) {
+    return (
+      <ClosedPanelContainer>
+        <ToggleButton onClick={() => setIsExpanded(true)}>
+          <StyleIcon />
+        </ToggleButton>
+      </ClosedPanelContainer>
+    );
+  }
+
   return (
     <PanelContainer>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <TitleNoMargin>Styles</TitleNoMargin>
+        <CloseButton onClick={() => setIsExpanded(false)}>
+          <CloseSvgIcon />
+        </CloseButton>
+      </Box>
+
       <Box>
         <SectionTitle>Stroke Color</SectionTitle>
         <ColorGrid>
@@ -140,7 +218,7 @@ export const StylePanel = ({ boardId }: { boardId: string }) => {
         </ColorGrid>
       </Box>
 
-      <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+      <StyledDivider />
 
       <Box>
         <SectionTitle>Fill Color</SectionTitle>
@@ -157,51 +235,43 @@ export const StylePanel = ({ boardId }: { boardId: string }) => {
         </ColorGrid>
       </Box>
 
-      <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+      <StyledDivider />
 
       <Box>
         <SectionTitle>Stroke Width: {element.style.strokeWidth}px</SectionTitle>
-        <Slider
+        <StyledSlider
           value={element.style.strokeWidth}
           min={0}
           max={24}
           step={1}
           onChange={(_, value) => handleUpdate({ strokeWidth: value as number })}
-          sx={{ color: "#6366f1" }}
         />
         <Box display="flex" gap={1} flexWrap="wrap">
           {PRESET_STROKES.map(w => (
-            <button
+            <StrokeWidthButton
               key={`width-${w}`}
               onClick={() => handleUpdate({ strokeWidth: w })}
-              style={{
-                background: element.style.strokeWidth === w ? "rgba(99,102,241,0.25)" : "transparent",
-                border: "1px solid rgba(255,255,255,0.2)",
-                color: element.style.strokeWidth === w ? "#a5b4fc" : "#cbd5e1",
-                borderRadius: "4px",
-                padding: "2px 8px",
-                cursor: "pointer",
-              }}
+              $selected={element.style.strokeWidth === w}
             >
               {w}
-            </button>
+            </StrokeWidthButton>
           ))}
         </Box>
       </Box>
 
-      <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+      <StyledDivider />
 
       <Box>
         <SectionTitle>Opacity: {Math.round(element.style.opacity * 100)}%</SectionTitle>
-        <Slider
+        <StyledSlider
           value={element.style.opacity}
           min={0.1}
           max={1}
           step={0.05}
           onChange={(_, value) => handleUpdate({ opacity: value as number })}
-          sx={{ color: "#6366f1" }}
         />
       </Box>
     </PanelContainer>
   );
 };
+

@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { ElementModel, type IElement, type LamportTimestamp } from "../element/element.model";
 import { createElement, updateElement, deleteElement } from "../element/element.service";
+import { BoardModel } from "../board/board.model";
 
 interface SyncOperation {
   elementId: string;
@@ -20,12 +21,22 @@ export const processSync = async (
   const applied: (IElement | { deleted: string })[] = [];
   const rejected: { op: SyncOperation; authoritative: IElement }[] = [];
 
+  const board = await BoardModel.findById(boardId);
+  if (!board) {
+    throw new Error("Board not found for sync");
+  }
+
+  const member = board.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+  const role = member?.role || "Viewer";
+
   for (const op of operations) {
+    const canEdit = role === "Owner" || role === "Collaborator";
+    if (!canEdit) continue;
 
     if (op.operation === "create") {
       const existing = await ElementModel.findById(op.elementId);
       if (!existing && op.payload) {
-        const el = await createElement(op.boardId ?? boardId, userId, op.payload);
+        const el = await createElement(op.boardId ?? boardId, userId, role, op.payload);
         applied.push(el as IElement);
       }
       continue;
@@ -36,6 +47,7 @@ export const processSync = async (
         const { element, accepted } = await updateElement(
           op.elementId,
           userId,
+          role,
           op.payload,
           op.lamportTs
         );
@@ -52,7 +64,7 @@ export const processSync = async (
 
     if (op.operation === "delete") {
       try {
-        await deleteElement(op.elementId);
+        await deleteElement(op.elementId, userId, role);
         applied.push({ deleted: op.elementId });
       } catch {
         continue;

@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import "../../common/types/expressTypes";
 
 import {
   getBoardById,

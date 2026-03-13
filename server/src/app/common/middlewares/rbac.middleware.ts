@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "./errorHandler";
-import "../types/expressTypes";
 
 export const requireRole =
   (roles: string[]) =>

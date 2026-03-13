@@ -85,6 +85,12 @@ const ActionButtons = styled('div')(({ theme }) => ({
   },
 }));
 
+const HeroButton = styled(Button)({
+  padding: '1rem 2rem',
+  fontSize: '1.125rem',
+  borderRadius: '50px'
+});
+
 const FeaturesGrid = styled('div')({
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
@@ -155,12 +161,9 @@ export const LandingPage = () => {
         </Subtitle>
         
         <ActionButtons>
-          <Button 
-            style={{ padding: '1rem 2rem', fontSize: '1.125rem', borderRadius: '50px' }}
-            onClick={() => navigate('/register')}
-          >
+          <HeroButton onClick={() => navigate('/register')}>
             Start Collaborating Now
-          </Button>
+          </HeroButton>
         </ActionButtons>
       </HeroSection>
 

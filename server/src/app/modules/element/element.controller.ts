@@ -21,6 +21,7 @@ export const createElementController = async (
   const element = await createElement(
     id as string,
     userId!,
+    req.boardMemberRole!,
     req.body
   );
 
@@ -51,6 +52,7 @@ export const updateElementController = async (
   const element = await updateElement(
     elementId as string,
     userId!,
+    req.boardMemberRole!,
     req.body
   );
 
@@ -62,9 +64,10 @@ export const deleteElementController = async (
   res: Response
 ) => {
 
+  const userId = req.user?.id;
   const { elementId } = req.params;
 
-  await deleteElement(elementId as string);
+  await deleteElement(elementId as string, userId!, req.boardMemberRole!);
 
   return successResponse(res, "Element deleted");
 };

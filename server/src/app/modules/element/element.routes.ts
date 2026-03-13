@@ -8,7 +8,7 @@ import {
 } from "./element.controller";
 
 import { authMiddleware } from "../../common/middlewares/auth.middleware";
-
+import { isBoardMember } from "../../common/middlewares/membership.middleware";
 import { validateBody } from "../../common/middlewares/validate.middleware";
 
 import {
@@ -21,6 +21,7 @@ export const elementRoutes = Router();
 elementRoutes.post(
   "/boards/:id/elements",
   authMiddleware,
+  isBoardMember,
   validateBody(createElementSchema),
   createElementController
 );
@@ -28,12 +29,14 @@ elementRoutes.post(
 elementRoutes.get(
   "/boards/:id/elements",
   authMiddleware,
+  isBoardMember,
   getElementsController
 );
 
 elementRoutes.patch(
   "/boards/:id/elements/:elementId",
   authMiddleware,
+  isBoardMember,
   validateBody(updateElementSchema),
   updateElementController
 );
@@ -41,5 +44,6 @@ elementRoutes.patch(
 elementRoutes.delete(
   "/boards/:id/elements/:elementId",
   authMiddleware,
+  isBoardMember,
   deleteElementController
 );

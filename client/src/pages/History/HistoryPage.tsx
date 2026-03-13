@@ -52,6 +52,12 @@ const PageSubtitle = styled(Typography)(({ theme }) => ({
   marginTop: '8px'
 }));
 
+const EmptyStateText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  textAlign: 'center',
+  marginTop: theme.spacing(8)
+}));
+
 export const HistoryPage = () => {
   const { data } = useGetBoardsQuery(null);
   const boards = useMemo(() => data?.data || [], [data]);
@@ -71,9 +77,9 @@ export const HistoryPage = () => {
         {boards.length > 0 ? (
           <BoardGrid boards={boards} />
         ) : (
-          <Typography sx={{ color: 'text.secondary', textAlign: 'center', mt: 8 }}>
+          <EmptyStateText>
             No recent boards found. Head to the dashboard to create or join one!
-          </Typography>
+          </EmptyStateText>
         )}
       </ContentWrapper>
     </PageContainer>

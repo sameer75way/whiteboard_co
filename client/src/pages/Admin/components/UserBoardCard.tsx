@@ -53,6 +53,56 @@ const BoardsList = styled(Box)({
   marginTop: "auto",
 });
 
+const UserName = styled(Typography)(({ theme }) => ({
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+}));
+
+const UserEmail = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  marginBottom: theme.spacing(1),
+}));
+
+const BoardsSection = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(1),
+  paddingTop: theme.spacing(2),
+  borderTop: "1px solid rgba(255,255,255,0.05)",
+}));
+
+const BoardsTitle = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.primary,
+  marginBottom: theme.spacing(1),
+  fontWeight: 600,
+}));
+
+const EmptyBoardsText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  fontStyle: "italic",
+}));
+
+const BoardListItem = styled(Box)({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+});
+
+const BoardName = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  maxWidth: "60%",
+}));
+
+const RoleChip = styled(Chip)({
+  fontSize: "0.65rem",
+  height: "18px",
+});
+
+const MoreText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.disabled,
+  marginTop: theme.spacing(0.5),
+}));
+
 export const UserBoardCard = ({ user, boards }: UserBoardCardProps) => {
   const userBoards = boards.filter((board) => 
     board.members.some((member) => {
@@ -66,12 +116,12 @@ export const UserBoardCard = ({ user, boards }: UserBoardCardProps) => {
     <UserCard>
       <UserHeader>
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+          <UserName variant="h6">
             {user.name}
-          </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+          </UserName>
+          <UserEmail variant="body2">
             {user.email}
-          </Typography>
+          </UserEmail>
         </Box>
         <Chip 
           label={user.role} 
@@ -81,15 +131,15 @@ export const UserBoardCard = ({ user, boards }: UserBoardCardProps) => {
         />
       </UserHeader>
 
-      <Box sx={{ mt: 1, pt: 2, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <Typography variant="subtitle2" sx={{ color: "text.primary", mb: 1, fontWeight: 600 }}>
+      <BoardsSection>
+        <BoardsTitle variant="subtitle2">
           Associated Boards ({userBoards.length})
-        </Typography>
+        </BoardsTitle>
         
         {userBoards.length === 0 ? (
-          <Typography variant="body2" sx={{ color: "text.secondary", fontStyle: "italic" }}>
+          <EmptyBoardsText variant="body2">
             No boards joined yet.
-          </Typography>
+          </EmptyBoardsText>
         ) : (
           <BoardsList>
             {userBoards.slice(0, 3).map((board) => {
@@ -100,24 +150,24 @@ export const UserBoardCard = ({ user, boards }: UserBoardCardProps) => {
               });
               const role = currentMember?.role || "Viewer";
               return (
-                <Box key={board._id} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Typography noWrap variant="body2" sx={{ color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "60%" }}>
+                <BoardListItem key={board._id}>
+                  <BoardName noWrap variant="body2">
                     • {board.name}
-                  </Typography>
+                  </BoardName>
                   <Tooltip title={`Role: ${role}`} placement="left">
-                    <Chip size="small" label={role} sx={{ fontSize: "0.65rem", height: "18px" }} />
+                    <RoleChip size="small" label={role} />
                   </Tooltip>
-                </Box>
+                </BoardListItem>
               );
             })}
             {userBoards.length > 3 && (
-              <Typography variant="caption" sx={{ color: "text.disabled", mt: 0.5 }}>
+              <MoreText variant="caption">
                 + {userBoards.length - 3} more...
-              </Typography>
+              </MoreText>
             )}
           </BoardsList>
         )}
-      </Box>
+      </BoardsSection>
     </UserCard>
   );
 };

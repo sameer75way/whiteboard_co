@@ -76,6 +76,31 @@ const FooterBox = styled('div')(({ theme }) => ({
   marginTop: '1rem',
 }));
 
+const TopNavBox = styled('div')({
+  marginBottom: '-1rem'
+});
+
+const BackButton = styled(TextButton)(({ theme }) => ({
+  padding: 0,
+  textTransform: 'none',
+  color: theme.palette.text.secondary,
+  fontSize: '0.875rem'
+}));
+
+const ErrorText = styled('div')(({ theme }) => ({
+  color: theme.palette.error.main,
+  marginTop: '0.5rem',
+  fontSize: '0.9rem'
+}));
+
+const SubmitButton = styled(Button)({
+  marginTop: '0.5rem'
+});
+
+const LinkButton = styled(TextButton)({
+  padding: 0
+});
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -112,21 +137,18 @@ export const RegisterPage = () => {
   return (
     <PageContainer>
       <AuthCard>
-        <div style={{ marginBottom: '-1rem' }}>
-          <TextButton 
-            onClick={() => navigate('/')} 
-            style={{ padding: 0, textTransform: 'none', color: '#64748b', fontSize: '0.875rem' }}
-          >
+        <TopNavBox>
+          <BackButton onClick={() => navigate('/')}>
             ← Back to home
-          </TextButton>
-        </div>
+          </BackButton>
+        </TopNavBox>
 
         <HeaderBox>
           <Title>Create Account</Title>
           <Subtitle>Join and start collaborating today.</Subtitle>
-          {error && <div style={{ color: '#ef4444', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+          {error && <ErrorText>
             {error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'message' in error.data ? (error.data as {message: string}).message : 'Registration failed.'}
-          </div>}
+          </ErrorText>}
         </HeaderBox>
 
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -154,16 +176,16 @@ export const RegisterPage = () => {
             error={!!formErrors.password}
             helperText={formErrors.password?.message}
           />
-          <Button type="submit" disabled={isLoading} style={{ marginTop: '0.5rem' }}>
+          <SubmitButton type="submit" disabled={isLoading}>
             {isLoading ? 'Creating...' : 'Sign Up'}
-          </Button>
+          </SubmitButton>
         </Form>
 
         <FooterBox>
           Already have an account?{' '}
-          <TextButton onClick={() => navigate('/login')} style={{ padding: 0 }}>
+          <LinkButton onClick={() => navigate('/login')}>
             Log in
-          </TextButton>
+          </LinkButton>
         </FooterBox>
       </AuthCard>
     </PageContainer>

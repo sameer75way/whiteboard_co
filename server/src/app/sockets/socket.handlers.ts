@@ -1,11 +1,8 @@
 import { Server, Socket } from "socket.io";
 
-import {
-  createElement,
-  updateElement,
-  deleteElement
-} from "../modules/element/element.service";
+import { createElement, updateElement, deleteElement } from "../modules/element/element.service";
 import { IElement, LamportTimestamp } from "../modules/element/element.model";
+import { BoardModel } from "../modules/board/board.model";
 
 
 interface JoinBoardPayload {
@@ -71,6 +68,16 @@ export const registerSocketHandlers = (
 
   socket.on("board:join", async (data: JoinBoardPayload) => {
     const { boardId } = data;
+    
+    const board = await BoardModel.findById(boardId);
+    if (!board) return;
+
+    const member = board.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+    if (!member && socket.data.role !== "Admin") {
+      console.warn(`[SOCKET] Unauthorized join attempt by ${userId} for board ${boardId}`);
+      return;
+    }
+
     socket.join(boardId);
     activeBoards.add(boardId);
     io.to(boardId).emit("user:joined", { userId });
@@ -100,9 +107,17 @@ export const registerSocketHandlers = (
   socket.on("element:create", async (data: CreateElementPayload) => {
     try {
       const { boardId, element } = data;
+      
+      const board = await BoardModel.findById(boardId);
+      const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+      const canEdit = member?.role === "Owner" || member?.role === "Collaborator" || socket.data.role === "Admin";
+      
+      if (!canEdit) return;
+
       const newElement = await createElement(
         boardId,
         userId,
+        member?.role || "Viewer",
         element as Partial<IElement>
       );
       io.to(boardId).emit("element:created", newElement);
@@ -116,9 +131,16 @@ export const registerSocketHandlers = (
     try {
       const { boardId, elementId, payload, lamportTs } = data;
 
+      const board = await BoardModel.findById(boardId);
+      const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+      const canEdit = member?.role === "Owner" || member?.role === "Collaborator" || socket.data.role === "Admin";
+      
+      if (!canEdit) return;
+
       const { element, accepted } = await updateElement(
         elementId,
         userId,
+        member?.role || "Viewer",
         payload as Partial<IElement>,
         lamportTs
       );
@@ -138,7 +160,14 @@ export const registerSocketHandlers = (
   socket.on("element:delete", async (data: DeleteElementPayload) => {
     try {
       const { boardId, elementId } = data;
-      await deleteElement(elementId);
+      
+      const board = await BoardModel.findById(boardId);
+      const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+      const canEdit = member?.role === "Owner" || member?.role === "Collaborator" || socket.data.role === "Admin";
+      
+      if (!canEdit) return;
+
+      await deleteElement(elementId, userId, member?.role || "Viewer");
       socket.to(boardId).emit("element:deleted", { elementId });
     } catch (error) {
       console.error("Socket delete element error:", error);
@@ -155,14 +184,25 @@ export const registerSocketHandlers = (
     for (const op of operations) {
       try {
         if (op.operation === "create") {
-          const el = await createElement(op.boardId, userId, op.payload);
+          const board = await BoardModel.findById(op.boardId);
+          const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+          const role = member?.role || "Viewer";
+          
+          if (role === "Viewer") continue;
+
+          const el = await createElement(op.boardId, userId, role, op.payload);
           io.to(op.boardId).emit("element:created", el);
         }
 
         if (op.operation === "update") {
+          const board = await BoardModel.findById(op.boardId);
+          const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+          const role = member?.role || "Viewer";
+
           const { element, accepted } = await updateElement(
             op.elementId,
             userId,
+            role,
             op.payload,
             op.lamportTs
           );
@@ -174,7 +214,11 @@ export const registerSocketHandlers = (
         }
 
         if (op.operation === "delete") {
-          await deleteElement(op.elementId);
+          const board = await BoardModel.findById(op.boardId);
+          const member = board?.members.find(m => m.user.toString() === userId && m.status === "Accepted");
+          const role = member?.role || "Viewer";
+
+          await deleteElement(op.elementId, userId, role);
           io.to(op.boardId).emit("element:deleted", { elementId: op.elementId });
         }
       } catch (err) {

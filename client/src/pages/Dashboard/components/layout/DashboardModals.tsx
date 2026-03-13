@@ -1,6 +1,30 @@
 import { Snackbar, Alert, Dialog, DialogTitle, DialogContent, CircularProgress, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import { CreateBoardModal } from "../CreateBoardModal";
 import { JoinBoardModal } from "../JoinBoardModal";
+
+const FullWidthAlert = styled(Alert)({
+  width: '100%'
+});
+
+const CenteredTitle = styled(DialogTitle)(({ theme }) => ({
+  textAlign: 'center',
+  paddingTop: theme.spacing(4)
+}));
+
+const CenteredContent = styled(DialogContent)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  paddingBottom: theme.spacing(4),
+  paddingLeft: theme.spacing(4),
+  paddingRight: theme.spacing(4),
+  minWidth: 300
+}));
+
+const SpacedProgress = styled(CircularProgress)(({ theme }) => ({
+  marginBottom: theme.spacing(3)
+}));
 
 interface DashboardModalsProps {
   createOpen: boolean;
@@ -47,21 +71,21 @@ export const DashboardModals = ({
         onClose={onCloseAlert}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert onClose={onCloseAlert} severity={alertInfo.severity} sx={{ width: '100%' }}>
+        <FullWidthAlert onClose={onCloseAlert} severity={alertInfo.severity}>
           {alertInfo.message}
-        </Alert>
+        </FullWidthAlert>
       </Snackbar>
 
       <Dialog open={waitingApprovalOpen} onClose={onCloseWaiting}>
-        <DialogTitle sx={{ textAlign: 'center', pt: 4 }}>Waiting for Approval</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pb: 4, px: 4, minWidth: 300 }}>
-          <CircularProgress sx={{ mb: 3 }} />
+        <CenteredTitle>Waiting for Approval</CenteredTitle>
+        <CenteredContent>
+          <SpacedProgress />
           <Typography variant="body1" align="center" color="text.secondary">
             The board owner has been notified. 
             <br/>
             Please wait while they review your request...
           </Typography>
-        </DialogContent>
+        </CenteredContent>
       </Dialog>
     </>
   );
