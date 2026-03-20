@@ -1,7 +1,7 @@
 import { db } from "./offlineDB";
 import type { OfflineOperation } from "./offlineDB";
 
-export const addOfflineOperation = async (operation: Omit<OfflineOperation, "id">) => {
+export const addOfflineOperation = async (operation: OfflineOperation) => {
 
   await db.operations.add(operation);
 

@@ -8,7 +8,8 @@ export type ElementType =
   | "image"
   | "sticky"
   | "triangle"
-  | "line"; 
+  | "sticker"
+  | "emoji";
 
 export interface ElementPosition {
   x: number;

@@ -131,6 +131,9 @@ export const WhiteboardPage = () => {
     handleCreateLine,
     handleCreateText,
     handleCreateSticky,
+    handleCreateSticker,
+    handleCreateEmoji,
+    handleCreateGif,
     handleDelete,
     computeStateDiffAndSync,
     selectedElementId,
@@ -241,6 +244,9 @@ export const WhiteboardPage = () => {
             onLine={handleCreateLine}
             onText={handleCreateText}
             onSticky={handleCreateSticky}
+            onSticker={(preset) => handleCreateSticker(undefined, undefined, preset)}
+            onEmoji={(emoji) => handleCreateEmoji(undefined, undefined, emoji)}
+            onGif={(gifUrl) => gifUrl && handleCreateGif(gifUrl)}
             onDelete={handleDelete}
             onUndo={() => computeStateDiffAndSync('undo')}
             onRedo={() => computeStateDiffAndSync('redo')}

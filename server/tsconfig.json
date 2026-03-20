@@ -10,7 +10,7 @@
     "noImplicitAny": true,
     "noUnusedLocals": true,
     "noImplicitReturns": true,
-
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "moduleResolution": "node",
 

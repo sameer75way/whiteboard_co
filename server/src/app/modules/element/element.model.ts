@@ -64,7 +64,8 @@ const elementSchema = new mongoose.Schema<IElement>(
         "image",
         "sticky",
         "triangle",
-        "line"
+        "sticker",
+        "emoji"
       ],
       required: true
     },

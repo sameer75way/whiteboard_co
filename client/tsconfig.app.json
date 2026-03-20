@@ -23,20 +23,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-
-    "baseUrl": "./src",
-
-    "paths": {
-      "@app/*": ["app/*"],
-      "@features/*": ["features/*"],
-      "@pages/*": ["pages/*"],
-      "@services/*": ["services/*"],
-      "@hooks/*": ["hooks/*"],
-      "@utils/*": ["utils/*"],
-      "@types/*": ["types/*"],
-      "@components/*": ["components/*"],
-      "@theme/*": ["theme/*"]
-    }
+    "ignoreDeprecations": "5.0"
   },
   "include": ["src"]
 }

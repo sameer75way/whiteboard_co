@@ -1,9 +1,9 @@
-import { Rect, Circle, Text, RegularPolygon, Line } from "react-konva";
+import { Rect, Circle, Text, RegularPolygon, Line, Group, Image as KonvaImage } from "react-konva";
 import { StickyNoteElement } from "./StickyNoteElement";
 import { type KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
 import { store } from "../../../../store/index";
-import { useRef, useCallback, type RefObject } from "react";
+import { useRef, useCallback, type RefObject, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../../store/index";
 import { db } from "../../../../services/offline/offlineDB";
@@ -27,13 +27,27 @@ interface Props {
 export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEditText, onContextMenu }: Props) => {
   const dispatch = useDispatch();
   const userName = useSelector((state: RootState) => state.auth.user?.name) || "User";
-  const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group | Konva.RegularPolygon | Konva.Line>(null);
+  const shapeRef = useRef<Konva.Rect | Konva.Circle | Konva.Text | Konva.Group | Konva.RegularPolygon | Konva.Line | Konva.Image>(null);
+  const [imageObj, setImageObj] = useState<HTMLImageElement | null>(null);
   const lastCursorEmitRef = useRef<number>(0);
 
   const selectedElementId = useSelector((state: RootState) => state.canvas.selectedElementId);
   const isSelected = selectedElementId === element._id;
 
   const isDisabled = isViewer || isLayerLocked;
+
+  useEffect(() => {
+    if (element.type !== "image" || !element.imageUrl) return;
+
+    const image = new window.Image();
+    image.crossOrigin = "anonymous";
+    image.src = element.imageUrl;
+    image.onload = () => setImageObj(image);
+
+    return () => {
+      image.onload = null;
+    };
+  }, [element.type, element.imageUrl]);
 
   const broadcastUpdate = useCallback(async (updated: Element) => {
     if (isDisabled) return;
@@ -303,6 +317,84 @@ export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEdi
     );
   }
 
+  if (element.type === "emoji") {
+    return (
+      <Text
+        ref={shapeRef as RefObject<Konva.Text>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        text={element.content || "😀"}
+        fontSize={Math.max(24, Math.min(element.dimensions.width, element.dimensions.height) * 0.8)}
+        fill={element.style.fill}
+        width={element.dimensions.width}
+        height={element.dimensions.height}
+        align="center"
+        verticalAlign="middle"
+        rotation={element.rotation || 0}
+        draggable={!isDisabled}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
+        onDblClick={handleDblClick}
+        onDblTap={handleDblClick}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
+      />
+    );
+  }
+
+  if (element.type === "sticker") {
+    return (
+      <Group
+        ref={shapeRef as RefObject<Konva.Group>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        width={element.dimensions.width}
+        height={element.dimensions.height}
+        rotation={element.rotation || 0}
+        draggable={!isDisabled}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
+        onDblClick={handleDblClick}
+        onDblTap={handleDblClick}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
+      >
+        <Rect
+          width={element.dimensions.width}
+          height={element.dimensions.height}
+          cornerRadius={20}
+          fill={element.style.fill}
+          stroke={element.style.stroke}
+          strokeWidth={element.style.strokeWidth}
+          opacity={element.style.opacity}
+          shadowColor="#000"
+          shadowOpacity={0.18}
+          shadowBlur={16}
+          shadowOffset={{ x: 0, y: 6 }}
+        />
+        <Text
+          text={element.content || "⭐"}
+          width={element.dimensions.width}
+          height={element.dimensions.height}
+          align="center"
+          verticalAlign="middle"
+          fontSize={Math.max(28, Math.min(element.dimensions.width, element.dimensions.height) * 0.45)}
+          fill="#111827"
+        />
+      </Group>
+    );
+  }
+
   if (element.type === "sticky") {
     return (
       <StickyNoteElement
@@ -363,6 +455,31 @@ export const CanvasElement = ({ element, boardId, isViewer, isLayerLocked, onEdi
         opacity={element.style.opacity}
         draggable={!isDisabled}
         hitStrokeWidth={Math.max(20, element.style.strokeWidth)}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onTransform={handleTransform}
+        onTransformEnd={handleTransformEnd}
+        onContextMenu={handleRightClick}
+      />
+    );
+  }
+
+  if (element.type === "image") {
+    return (
+      <KonvaImage
+        ref={shapeRef as RefObject<Konva.Image>}
+        id={element._id}
+        x={element.position.x}
+        y={element.position.y}
+        image={imageObj ?? undefined}
+        width={element.dimensions.width}
+        height={element.dimensions.height}
+        rotation={element.rotation || 0}
+        opacity={element.style.opacity}
+        draggable={!isDisabled}
         onMouseDown={handlePress}
         onTouchStart={handlePress}
         onDragStart={handleDragStart}

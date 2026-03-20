@@ -7,8 +7,12 @@ import {
   createTextElement,
   createStickyNote,
   createTriangleElement,
-  createLineElement
+  createLineElement,
+  createStickerElement,
+  createEmojiElement,
+  createGifElement
 } from "../../../lib/utils/canvas.utils";
+import type { StickerPreset } from "../../../lib/utils/canvas.utils";
 import { addElement, deleteElement, undo, redo, selectElement } from "../../../store/canvas/canvasSlice";
 import { socket } from "../../../services/socket/socketClient";
 import { db } from "../../../services/offline/offlineDB";
@@ -111,6 +115,24 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     emitCreateElement(createLineElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined));
   }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
 
+  const handleCreateSticker = useCallback((x?: number, y?: number, preset?: StickerPreset) => {
+    if (!boardId) return;
+    const center = getViewportCenter();
+    emitCreateElement(createStickerElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined, preset));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
+
+  const handleCreateEmoji = useCallback((x?: number, y?: number, emoji?: string) => {
+    if (!boardId) return;
+    const center = getViewportCenter();
+    emitCreateElement(createEmojiElement(boardId, x ?? center.x, y ?? center.y, activeLayerId ?? undefined, emoji));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
+
+  const handleCreateGif = useCallback((gifUrl: string, x?: number, y?: number) => {
+    if (!boardId || !gifUrl) return;
+    const center = getViewportCenter();
+    emitCreateElement(createGifElement(boardId, x ?? center.x, y ?? center.y, gifUrl, activeLayerId ?? undefined));
+  }, [boardId, emitCreateElement, activeLayerId, getViewportCenter]);
+
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const executeDelete = useCallback(() => {
@@ -119,12 +141,14 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     if (navigator.onLine) {
       socket.emit("element:delete", { boardId, elementId: selectedElementId });
     } else {
+      const lamportTs = nextLamport();
       db.operations.add({
         boardId,
         elementId: selectedElementId,
         operation: "delete",
         payload: selectedElement ?? {},
-        clientVersion: selectedElement?.version ?? 0
+        clientVersion: selectedElement?.version ?? 0,
+        lamportTs
       });
     }
   }, [boardId, selectedElementId, selectedElement, dispatch]);
@@ -181,6 +205,9 @@ export const useWhiteboardCommands = (boardId: string | undefined) => {
     handleCreateSticky,
     handleCreateTriangle,
     handleCreateLine,
+    handleCreateSticker,
+    handleCreateEmoji,
+    handleCreateGif,
     handleDelete,
     computeStateDiffAndSync,
     selectedElementId,

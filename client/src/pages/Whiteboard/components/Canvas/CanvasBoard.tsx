@@ -19,6 +19,12 @@ import type { Layer as LayerType } from "../../../../types/board.types";
 import { Menu, MenuItem, Typography } from "@mui/material";
 import { useMoveElementToLayerMutation } from "../../../../services/api/layerApi";
 
+declare global {
+  interface Window {
+    __WBC_DRAG_TOOL?: { toolType: string; toolPayload?: string };
+  }
+}
+
 const BoardContainer = styled('div')({
   width: "100%",
   height: "100%"
@@ -302,17 +308,51 @@ export const CanvasBoard = ({ boardId, isViewer, readOnly = false, previewElemen
     setTextEdit(null);
   }, [textEdit, elements, dispatch, boardId]);
 
-  const { handleCreateRectangle, handleCreateCircle, handleCreateText, handleCreateSticky, handleCreateTriangle, handleCreateLine } = useWhiteboardCommands(boardId);
+  const {
+    handleCreateRectangle,
+    handleCreateCircle,
+    handleCreateText,
+    handleCreateSticky,
+    handleCreateTriangle,
+    handleCreateLine,
+    handleCreateSticker,
+    handleCreateEmoji,
+    handleCreateGif
+  } = useWhiteboardCommands(boardId);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (isViewer || readOnly) return;
-    const toolType = e.dataTransfer.getData("application/react-whiteboard-tool");
+
+    let toolType = e.dataTransfer.getData("application/react-whiteboard-tool");
+    let toolPayload = e.dataTransfer.getData("application/react-whiteboard-tool-payload");
+
+    if (!toolType) {
+      const plainPayload = e.dataTransfer.getData("text/plain");
+      if (plainPayload) {
+        try {
+          const parsed = JSON.parse(plainPayload) as { toolType?: string; toolPayload?: string };
+          toolType = parsed.toolType || "";
+          toolPayload = parsed.toolPayload || "";
+        } catch {
+          // Ignore invalid fallback payload.
+        }
+      }
+    }
+
+    if (!toolType && window.__WBC_DRAG_TOOL?.toolType) {
+      toolType = window.__WBC_DRAG_TOOL.toolType;
+      toolPayload = window.__WBC_DRAG_TOOL.toolPayload || "";
+    }
+
     if (!toolType || !stageRef.current) return;
-    stageRef.current.setPointersPositions(e);
-    const pointerPosition = stageRef.current.getPointerPosition();
-    if (!pointerPosition) return;
+
     const stage = stageRef.current;
+    const stageBox = stage.container().getBoundingClientRect();
+    const pointerPosition = {
+      x: e.clientX - stageBox.left,
+      y: e.clientY - stageBox.top
+    };
     const scale = stage.scaleX();
     const position = stage.position();
     const x = (pointerPosition.x - position.x) / scale;
@@ -324,8 +364,22 @@ export const CanvasBoard = ({ boardId, isViewer, readOnly = false, previewElemen
       case "sticky": handleCreateSticky(x, y); break;
       case "triangle": handleCreateTriangle(x, y); break;
       case "line": handleCreateLine(x, y); break;
+      case "sticker": {
+        let preset;
+        try {
+          preset = toolPayload ? JSON.parse(toolPayload) : undefined;
+        } catch {
+          preset = undefined;
+        }
+        handleCreateSticker(x, y, preset);
+        break;
+      }
+      case "emoji": handleCreateEmoji(x, y, toolPayload || undefined); break;
+      case "gif": if (toolPayload) handleCreateGif(toolPayload, x, y); break;
       default: break;
     }
+
+    window.__WBC_DRAG_TOOL = undefined;
   };
 
   const handleContextMenu = useCallback((elementId: string, mouseX: number, mouseY: number) => {
