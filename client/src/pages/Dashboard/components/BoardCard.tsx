@@ -171,6 +171,7 @@ export const BoardCard = ({ id, name, shareCode, members }: Props) => {
               size="small" 
               onClick={handleDeleteClick}
               disabled={isDeleting}
+              aria-label="Delete board"
             >
               <DeleteIcon fontSize="small" />
             </DeleteButton>
@@ -183,7 +184,7 @@ export const BoardCard = ({ id, name, shareCode, members }: Props) => {
             Code: {shareCode}
           </ShareText>
           <Tooltip title="Copy share code" placement="top" arrow>
-            <CopyButton size="small" onClick={copyShareCode}>
+            <CopyButton size="small" onClick={copyShareCode} aria-label="Copy share code">
               <CopyIcon />
             </CopyButton>
           </Tooltip>

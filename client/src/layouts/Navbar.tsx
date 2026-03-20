@@ -78,9 +78,10 @@ export const Navbar = () => {
             </Typography>
             <StyledIconButton
               size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
+              aria-label="Open account menu"
+              aria-controls={anchorEl ? "menu-appbar" : undefined}
+              aria-haspopup="menu"
+              aria-expanded={Boolean(anchorEl)}
               onClick={handleMenu}
               color="inherit"
             >

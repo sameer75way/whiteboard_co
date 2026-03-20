@@ -82,6 +82,7 @@ export const snapshotApi = baseApi.injectEndpoints({
 export const {
   useListSnapshotsQuery,
   useGetSnapshotQuery,
+  useLazyGetSnapshotQuery,
   useCreateManualSnapshotMutation,
   useRestoreSnapshotMutation,
   useDeleteSnapshotMutation

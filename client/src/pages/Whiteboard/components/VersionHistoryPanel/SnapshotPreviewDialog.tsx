@@ -180,7 +180,7 @@ export const SnapshotPreviewDialog = () => {
       <Dialog fullScreen open={isOpen} onClose={handleClose}>
         <AppBar position="relative" color="default" elevation={0}>
           <Toolbar>
-            <IconButton edge="start" onClick={handleClose}>
+            <IconButton edge="start" onClick={handleClose} aria-label="Close snapshot preview">
               <CloseIcon />
             </IconButton>
             <TitleContainer>

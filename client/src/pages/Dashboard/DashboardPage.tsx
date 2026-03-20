@@ -1,5 +1,6 @@
 import { Box } from "@mui/material";
-import { Add as AddIcon, GroupAdd as JoinIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import { styled, keyframes } from '@mui/material/styles';
 
 import { BoardGrid } from "./components/BoardGrid";
@@ -92,7 +93,7 @@ export const DashboardPage = () => {
           />
           <DashboardActionCard
             onClick={() => setJoinOpen(true)}
-            icon={<JoinIcon />}
+            icon={<GroupAddIcon />}
             text="Join Board"
             type="join"
           />

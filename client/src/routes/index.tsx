@@ -1,11 +1,12 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import { ProtectedRoute } from '../layouts/ProtectedRoute';
-import { PublicRoute } from '../layouts/PublicRoute';
-import { MainLayout } from '../layouts/MainLayout';
+import { LandingPage } from '../pages/Landing/LandingPage';
 
-const LandingPage = lazy(() => import('../pages/Landing/LandingPage').then(m => ({ default: m.LandingPage })));
+const ProtectedRoute = lazy(() => import('../layouts/ProtectedRoute').then(m => ({ default: m.ProtectedRoute })));
+const PublicRoute = lazy(() => import('../layouts/PublicRoute').then(m => ({ default: m.PublicRoute })));
+const MainLayout = lazy(() => import('../layouts/MainLayout').then(m => ({ default: m.MainLayout })));
+
 const LoginPage = lazy(() => import('../pages/Auth/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../pages/Auth/RegisterPage').then(m => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../pages/Auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
@@ -30,28 +31,34 @@ const LoadingFallback = () => (
   </StyledFallbackBox>
 );
 
+const withSuspense = (element: ReactNode) => (
+  <Suspense fallback={<LoadingFallback />}>
+    {element}
+  </Suspense>
+);
+
 const router = createBrowserRouter([
   {
-    element: <PublicRoute />,
+    element: withSuspense(<PublicRoute />),
     children: [
-      { path: '/', element: <Suspense fallback={<LoadingFallback />}><LandingPage /></Suspense> },
-      { path: '/login', element: <Suspense fallback={<LoadingFallback />}><LoginPage /></Suspense> },
-      { path: '/register', element: <Suspense fallback={<LoadingFallback />}><RegisterPage /></Suspense> },
-      { path: '/forgot-password', element: <Suspense fallback={<LoadingFallback />}><ForgotPasswordPage /></Suspense> },
-      { path: '/reset-password/:token', element: <Suspense fallback={<LoadingFallback />}><ResetPasswordPage /></Suspense> },
+      { path: '/', element: <LandingPage /> },
+      { path: '/login', element: withSuspense(<LoginPage />) },
+      { path: '/register', element: withSuspense(<RegisterPage />) },
+      { path: '/forgot-password', element: withSuspense(<ForgotPasswordPage />) },
+      { path: '/reset-password/:token', element: withSuspense(<ResetPasswordPage />) },
     ],
   },
   
   {
-    element: <ProtectedRoute />,
+    element: withSuspense(<ProtectedRoute />),
     children: [
       {
-        element: <MainLayout />,
+        element: withSuspense(<MainLayout />),
         children: [
-          { path: '/dashboard', element: <Suspense fallback={<LoadingFallback />}><DashboardPage /></Suspense> },
-          { path: '/history', element: <Suspense fallback={<LoadingFallback />}><HistoryPage /></Suspense> },
-          { path: '/board/:id', element: <Suspense fallback={<LoadingFallback />}><WhiteboardPage /></Suspense> },
-          { path: '/admin/users', element: <Suspense fallback={<LoadingFallback />}><AdminUsersPage /></Suspense> },
+          { path: '/dashboard', element: withSuspense(<DashboardPage />) },
+          { path: '/history', element: withSuspense(<HistoryPage />) },
+          { path: '/board/:id', element: withSuspense(<WhiteboardPage />) },
+          { path: '/admin/users', element: withSuspense(<AdminUsersPage />) },
           { path: '*', element: <Navigate to="/dashboard" replace /> }
         ],
       },

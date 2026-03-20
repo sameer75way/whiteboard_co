@@ -4,10 +4,40 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>client</title>
+    <meta
+      name="description"
+      content="Whiteboard Co. is a real-time collaborative whiteboard for brainstorming, diagramming, and working offline with automatic sync."
+    />
+    <title>Whiteboard Co. | Real-time Collaborative Canvas</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      #boot-splash {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
+        color: #1f2937;
+        letter-spacing: 0.2px;
+      }
+
+      #boot-splash strong {
+        font-size: clamp(1.1rem, 2vw, 1.4rem);
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-splash" aria-label="Loading app">
+        <strong>Loading Whiteboard...</strong>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

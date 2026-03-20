@@ -6,7 +6,7 @@ import {
   IconButton,
   Box
 } from "@mui/material";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { Input } from "../../../../components/ui/Input";
 import { TextButton } from "../../../../components/ui/Button";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -87,6 +87,13 @@ const StyledReplySendButton = styled(IconButton)({
   }
 });
 
+let offlineReplyCounter = 0;
+
+const nextOfflineReplyId = () => {
+  offlineReplyCounter += 1;
+  return `temp-reply-${offlineReplyCounter}`;
+};
+
 const formatTimestamp = (dateStr: string): string => {
   const date = new Date(dateStr);
   const now = new Date();
@@ -106,10 +113,10 @@ export const CommentThreadItem = ({ comment, stickyNoteId, isReply = false }: Pr
   const dispatch = useDispatch();
   const [showReplyInput, setShowReplyInput] = useState(false);
   
-  const { control, handleSubmit, reset, watch } = useForm({
+  const { control, handleSubmit, reset } = useForm({
     defaultValues: { replyText: "" }
   });
-  const replyText = watch("replyText");
+  const replyText = useWatch({ control, name: "replyText" }) ?? "";
 
   const [createReply] = useCreateReplyMutation();
   const [deleteComment] = useDeleteCommentMutation();
@@ -127,7 +134,7 @@ export const CommentThreadItem = ({ comment, stickyNoteId, isReply = false }: Pr
         content: trimmed
       });
     } else {
-      const tempId = `temp-${Date.now()}`;
+      const tempId = nextOfflineReplyId();
       const boardId = elements[stickyNoteId]?.boardId || "";
       const fakeReply: CommentPopulated = {
         id: tempId,
@@ -180,7 +187,7 @@ export const CommentThreadItem = ({ comment, stickyNoteId, isReply = false }: Pr
             <Timestamp variant="caption">{formatTimestamp(comment.createdAt)}</Timestamp>
           </Box>
           {isOwn && (
-            <StyledDeleteButton size="small" onClick={handleDelete}>
+            <StyledDeleteButton size="small" onClick={handleDelete} aria-label="Delete comment">
               <DeleteOutlineIcon fontSize="small" />
             </StyledDeleteButton>
           )}
@@ -213,6 +220,7 @@ export const CommentThreadItem = ({ comment, stickyNoteId, isReply = false }: Pr
               type="submit"
               size="small"
               disabled={!replyText.trim()}
+              aria-label="Send reply"
             >
               <SendIcon fontSize="small" />
             </StyledReplySendButton>

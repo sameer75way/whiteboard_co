@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Drawer,
@@ -15,7 +15,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import { styled } from "@mui/material/styles";
-import { useListSnapshotsQuery, useGetSnapshotQuery } from "../../../../services/api/snapshotApi";
+import { useListSnapshotsQuery, useLazyGetSnapshotQuery } from "../../../../services/api/snapshotApi";
 import {
   setSnapshots,
   selectSnapshots,
@@ -127,11 +127,7 @@ export const VersionHistoryPanel = ({
     { skip: !open }
   );
 
-  const [previewId, setPreviewId] = useState<string | null>(null);
-  const { data: previewData } = useGetSnapshotQuery(
-    { boardId, snapshotId: previewId ?? "" },
-    { skip: !previewId }
-  );
+  const [getSnapshot] = useLazyGetSnapshotQuery();
 
   useEffect(() => {
     if (data) {
@@ -143,17 +139,15 @@ export const VersionHistoryPanel = ({
     }
   }, [data, dispatch]);
 
-  useEffect(() => {
-    if (previewData) {
+  const handlePreview = useCallback(async (id: string) => {
+    try {
+      const previewData = await getSnapshot({ boardId, snapshotId: id }).unwrap();
       dispatch(setPreviewSnapshot(previewData as SnapshotDetail));
       dispatch(setPreviewOpen(true));
-      setPreviewId(null);
+    } catch {
+      // Keep panel usable if preview fetch fails.
     }
-  }, [previewData, dispatch]);
-
-  const handlePreview = (id: string) => {
-    setPreviewId(id);
-  };
+  }, [boardId, dispatch, getSnapshot]);
 
   const hasMore = snapshots.length < totalSnapshots;
 
@@ -237,8 +231,8 @@ export const VersionHistoryPanel = ({
               Version History
             </Typography>
           </Box>
-          <CloseButton size="small">
-            <CloseIcon fontSize="small" htmlColor="rgba(255,255,255,0.8)" onClick={onClose} />
+          <CloseButton size="small" onClick={onClose} aria-label="Close version history">
+            <CloseIcon fontSize="small" htmlColor="rgba(255,255,255,0.8)" />
           </CloseButton>
         </DrawerHeader>
         <Divider />

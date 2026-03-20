@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { Group, Rect, Image as KonvaImage, Text } from "react-konva";
 import { Html } from "react-konva-utils";
 import Konva from "konva";
@@ -175,7 +175,10 @@ export const StickyNoteElement = ({
   const activeStickyNoteId = useSelector((state: RootState) => state.comments.activeStickyNoteId);
 
   const bgColor = (element.data?.backgroundColor as string) || element.style.fill;
-  const richContent = element.data?.richContent || { type: "doc", content: [{ type: "paragraph" }] };
+  const richContent = useMemo(
+    () => element.data?.richContent ?? { type: "doc", content: [{ type: "paragraph" }] },
+    [element.data?.richContent]
+  );
   const heading = (element.data?.heading as string) || "";
 
   const [localHeading, setLocalHeading] = useState(heading);
@@ -183,11 +186,7 @@ export const StickyNoteElement = ({
   const [renderedImage, setRenderedImage] = useState<HTMLImageElement | null>(null);
   const [isBadgeHovered, setIsBadgeHovered] = useState(false);
 
-  useEffect(() => {
-    if (!isEditing) {
-      setLocalHeading(heading);
-    }
-  }, [heading, isEditing]);
+  const displayHeading = isEditing ? localHeading : heading;
 
   const getFontSize = (chars: number) => {
     if (chars < 40) return 20;
@@ -196,6 +195,53 @@ export const StickyNoteElement = ({
     return 12;
   };
 
+  const syncUpdate = useCallback(async (updates: Partial<typeof element>) => {
+    const el = elementRef.current;
+    const lamportTs = nextLamport();
+    const elementWithTs = {
+      ...el,
+      ...updates,
+      version: el.version + 1,
+      lamportTs
+    };
+
+    store.dispatch(updateElement(elementWithTs));
+
+    if (navigator.onLine) {
+      socket.emit("element:update", {
+        boardId: el.boardId || "",
+        elementId: el._id,
+        payload: elementWithTs
+      });
+    } else {
+      db.operations.add({
+        boardId: el.boardId || "",
+        elementId: el._id,
+        operation: "update",
+        payload: elementWithTs,
+        clientVersion: el.version,
+        lamportTs
+      });
+    }
+  }, []);
+
+  const saveContent = useCallback((jsonContent: JSONContent) => {
+    const el = elementRef.current;
+    syncUpdate({
+      data: {
+        ...el.data,
+        richContent: jsonContent
+      }
+    });
+  }, [syncUpdate]);
+
+  const changeHeading = useCallback((newHeading: string) => {
+    const el = elementRef.current;
+    syncUpdate({
+      data: { ...el.data, heading: newHeading }
+    });
+  }, [syncUpdate]);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -203,6 +249,9 @@ export const StickyNoteElement = ({
     ],
     content: richContent,
     editable: !isDisabled,
+    onCreate: ({ editor: ed }) => {
+      setCharCount(ed.storage.characterCount.characters());
+    },
     onUpdate: ({ editor: ed }) => {
       setCharCount(ed.storage.characterCount.characters());
       saveContent(ed.getJSON());
@@ -215,25 +264,21 @@ export const StickyNoteElement = ({
 
   useEffect(() => {
     if (!isSelected && isEditing) {
-      setIsEditing(false);
       changeHeading(localHeading);
       if (editor) {
         saveContent(editor.getJSON());
       }
+      setTimeout(() => {
+        setIsEditing(false);
+      }, 0);
     }
-  }, [isSelected, isEditing, editor, localHeading]);
+  }, [isSelected, isEditing, editor, localHeading, changeHeading, saveContent]);
 
   useEffect(() => {
     if (editor && !isEditing && JSON.stringify(editor.getJSON()) !== JSON.stringify(richContent)) {
       editor.commands.setContent(richContent);
     }
   }, [richContent, editor, isEditing]);
-
-  useEffect(() => {
-    if (editor) {
-      setCharCount(editor.storage.characterCount.characters());
-    }
-  }, [editor]);
 
   useEffect(() => {
     if (isEditing || !editor) return;
@@ -244,7 +289,7 @@ export const StickyNoteElement = ({
       <svg xmlns="http://www.w3.org/2000/svg" width="${element.dimensions.width}" height="${element.dimensions.height}">
         <foreignObject width="100%" height="100%">
           <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: sans-serif; font-size: ${getFontSize(charCount)}px; color: #333; line-height: 1.5; padding: 16px 12px 12px 12px; box-sizing: border-box; width: 100%; height: 100%; display: flex; flex-direction: column;">
-            ${localHeading ? `<div style="border-bottom: 1px dashed rgba(0,0,0,0.15); font-weight: 700; font-size: 13px; margin-bottom: 6px; padding-bottom: 4px; color: rgba(0,0,0,0.85);">${localHeading}</div>` : ''}
+            ${displayHeading ? `<div style="border-bottom: 1px dashed rgba(0,0,0,0.15); font-weight: 700; font-size: 13px; margin-bottom: 6px; padding-bottom: 4px; color: rgba(0,0,0,0.85);">${displayHeading}</div>` : ''}
             <div style="margin: 0; padding: 0 4px; overflow: hidden; flex: 1;">
               <style>
                 p { margin: 0; }
@@ -273,47 +318,7 @@ export const StickyNoteElement = ({
     return () => {
       URL.revokeObjectURL(url);
     };
-  }, [localHeading, charCount, editor, isEditing, element.dimensions.width, element.dimensions.height, richContent]);
-
-  const syncUpdate = async (updates: Partial<typeof element>) => {
-    const el = elementRef.current;
-    const lamportTs = nextLamport();
-    const elementWithTs = {
-      ...el,
-      ...updates,
-      version: el.version + 1,
-      lamportTs
-    };
-    
-    store.dispatch(updateElement(elementWithTs));
-    
-    if (navigator.onLine) {
-      socket.emit("element:update", {
-        boardId: el.boardId || "",
-        elementId: el._id,
-        payload: elementWithTs
-      });
-    } else {
-      db.operations.add({
-        boardId: el.boardId || "",
-        elementId: el._id,
-        operation: "update",
-        payload: elementWithTs,
-        clientVersion: el.version,
-        lamportTs
-      });
-    }
-  };
-
-  const saveContent = (jsonContent: JSONContent) => {
-    const el = elementRef.current;
-    syncUpdate({
-      data: {
-        ...el.data,
-        richContent: jsonContent
-      }
-    });
-  };
+  }, [displayHeading, charCount, editor, isEditing, element.dimensions.width, element.dimensions.height, richContent]);
 
   const changeColor = (color: string) => {
     const el = elementRef.current;
@@ -323,16 +328,10 @@ export const StickyNoteElement = ({
     });
   };
 
-  const changeHeading = (newHeading: string) => {
-    const el = elementRef.current;
-    syncUpdate({
-      data: { ...el.data, heading: newHeading }
-    });
-  };
-
   const handleDblClick = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (isDisabled) return;
     e.cancelBubble = true;
+    setLocalHeading(heading);
     setIsEditing(true);
     setTimeout(() => {
       editor?.commands.focus("end");

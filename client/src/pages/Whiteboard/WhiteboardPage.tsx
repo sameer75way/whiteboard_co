@@ -51,12 +51,12 @@ const WhiteboardContainer = styled('div')({
   overflow: 'hidden'
 });
 
-const AutoSaveIndicator = styled(Box)<{ visible: boolean }>(({ visible }) => ({
+const AutoSaveIndicator = styled(Box)(() => ({
   position: "absolute",
   bottom: 72,
   right: 24,
   zIndex: 50,
-  display: visible ? "flex" : "none",
+  display: "flex",
   alignItems: "center",
   gap: "8px",
   padding: "8px 16px",
@@ -97,8 +97,7 @@ export const WhiteboardPage = () => {
   const [layersPanelOpen, setLayersPanelOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [autoSaveLabel, setAutoSaveLabel] = useState("");
-  const [autoSaveVisible, setAutoSaveVisible] = useState(false);
+  const autoSaveLabel = lastAutoSaveAt ? computeAutoSaveLabel(lastAutoSaveAt) : "";
 
   const saveFormSchema = z.object({ name: z.string() });
   const { control: saveControl, handleSubmit: handleSaveSubmit, reset: resetSaveForm } = useForm({
@@ -196,23 +195,6 @@ export const WhiteboardPage = () => {
     }
   }, [notifications, enqueueSnackbar, dispatch]);
 
-  useEffect(() => {
-    if (!lastAutoSaveAt) {
-      setAutoSaveLabel("");
-      setAutoSaveVisible(false);
-      return;
-    }
-    
-    setAutoSaveLabel(computeAutoSaveLabel(lastAutoSaveAt));
-    setAutoSaveVisible(true);
-    
-    const timeout = setTimeout(() => {
-      setAutoSaveVisible(false);
-    }, 4000);
-
-    return () => clearTimeout(timeout);
-  }, [lastAutoSaveAt]);
-
   const handleOpenSaveDialog = () => {
     resetSaveForm({ name: `Version ${totalSnapshots + 1}` });
     setSaveDialogOpen(true);
@@ -273,7 +255,7 @@ export const WhiteboardPage = () => {
       )}
 
       {autoSaveLabel && (
-        <AutoSaveIndicator visible={autoSaveVisible}>
+        <AutoSaveIndicator>
           <CloudDoneOutlinedIcon htmlColor="rgba(255,255,255,0.7)" fontSize="small" />
           <Typography variant="caption" color="rgba(255,255,255,0.8)" fontWeight={500}>
             {autoSaveLabel}

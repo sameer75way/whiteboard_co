@@ -296,7 +296,11 @@ const SortableLayerRow = ({
 
   const renderVisibilityButton = () => (
     <Tooltip title={layer.isVisible ? "Hide layer" : "Show layer"} arrow>
-      <SmallIconButton onClick={handleToggleVisibility} size="small">
+      <SmallIconButton
+        onClick={handleToggleVisibility}
+        size="small"
+        aria-label={layer.isVisible ? "Hide layer" : "Show layer"}
+      >
         {layer.isVisible
           ? <StyledVisibilityIcon />
           : <StyledVisibilityOffIcon />
@@ -313,7 +317,11 @@ const SortableLayerRow = ({
 
     return (
       <Tooltip title={layer.isLocked ? "Unlock layer" : "Lock layer"} arrow>
-        <SmallIconButton onClick={handleToggleLock} size="small">
+        <SmallIconButton
+          onClick={handleToggleLock}
+          size="small"
+          aria-label={layer.isLocked ? "Unlock layer" : "Lock layer"}
+        >
           {layer.isLocked
             ? <StyledLockIcon />
             : <StyledLockOpenIcon />
@@ -333,6 +341,7 @@ const SortableLayerRow = ({
             onClick={handleDelete}
             size="small"
             disabled={isLast}
+            aria-label="Delete layer"
           >
             <StyledDeleteIcon />
           </DeleteIconButton>
@@ -425,13 +434,13 @@ export const LayersPanel = ({ boardId, userRole, onClose }: LayersPanelProps) =>
       <HeaderActions>
         {canEdit && (
           <Tooltip title="Add layer" arrow>
-            <SmallIconButton onClick={handleAddLayer} size="small">
+            <SmallIconButton onClick={handleAddLayer} size="small" aria-label="Add layer">
               <StyledAddIcon />
             </SmallIconButton>
           </Tooltip>
         )}
         <Tooltip title="Close" arrow>
-          <SmallIconButton onClick={onClose} size="small">
+          <SmallIconButton onClick={onClose} size="small" aria-label="Close layers panel">
             <StyledCloseIcon />
           </SmallIconButton>
         </Tooltip>

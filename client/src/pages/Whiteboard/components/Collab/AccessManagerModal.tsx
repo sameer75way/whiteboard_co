@@ -17,7 +17,7 @@ import { styled } from '@mui/material/styles';
 
 const RoleSelectBox = styled(Box)({ minWidth: 160 });
 
-const StyledDialog = styled(Dialog)(({  }) => ({
+const StyledDialog = styled(Dialog)(() => ({
   '& .MuiPaper-root': {
     backgroundColor: 'rgba(15, 23, 42, 0.8)',
     backdropFilter: 'blur(24px)',
@@ -255,6 +255,7 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
                 onClick={() => setConfirmRemoveId(member.user._id)}
                 disabled={isUpdatingRole || isRemoving}
                 title="Remove Member"
+                aria-label={`Remove ${member.user.name}`}
               >
                 <RemoveCircleOutlineIcon fontSize="small" />
               </ActionIconButton>

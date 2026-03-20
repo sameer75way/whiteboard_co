@@ -9,5 +9,9 @@ export const PublicRoute = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <main>
+      <Outlet />
+    </main>
+  );
 };

@@ -47,6 +47,7 @@ const STICKER_PRESETS: StickerPreset[] = [
 
 const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY || "dc6zaTOxFJmzC";
 const GIF_FALLBACK_URL = "https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif";
+const GIF_FETCH_LIMIT = 12;
 
 interface Props {
   boardId: string;
@@ -264,6 +265,7 @@ const ToolBtn = ({
           size="medium"
           danger={danger}
           activeItem={activeItem}
+          aria-label={title}
           draggable={!!toolType}
           onDragStart={handleDragStart}
         >
@@ -301,7 +303,7 @@ export const Toolbar = ({
   const [gifAnchor, setGifAnchor] = useState<null | HTMLElement>(null);
   const [selectedEmoji, setSelectedEmoji] = useState<string>(EMOJI_PRESETS[0]);
   const [selectedSticker, setSelectedSticker] = useState<StickerPreset>(STICKER_PRESETS[0]);
-  const [selectedGif, setSelectedGif] = useState<string>("");
+  const [selectedGif, setSelectedGif] = useState<string>(GIF_FALLBACK_URL);
   const [gifSearch, setGifSearch] = useState("");
   const [gifItems, setGifItems] = useState<GiphyGif[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
@@ -331,30 +333,6 @@ export const Toolbar = ({
   const closeGifPicker = () => setGifAnchor(null);
 
   useEffect(() => {
-    let isCancelled = false;
-
-    const bootstrapDefaultGif = async () => {
-      try {
-        const endpoint = `https://api.giphy.com/v1/gifs/trending?api_key=${encodeURIComponent(GIPHY_API_KEY)}&limit=1&rating=pg`;
-        const response = await fetch(endpoint);
-        const json = await response.json() as { data?: Array<{ images?: { fixed_width?: { url?: string } } }> };
-        const defaultGif = json.data?.[0]?.images?.fixed_width?.url;
-        if (!isCancelled && defaultGif) {
-          setSelectedGif(defaultGif);
-        }
-      } catch {
-        // Keep empty default; users can still pick from the GIF menu.
-      }
-    };
-
-    bootstrapDefaultGif();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     if (!gifAnchor) return;
 
     let isCancelled = false;
@@ -362,17 +340,17 @@ export const Toolbar = ({
       try {
         setGifLoading(true);
         const endpoint = normalizedSearch
-          ? `https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(GIPHY_API_KEY)}&q=${encodeURIComponent(normalizedSearch)}&limit=24&rating=pg`
-          : `https://api.giphy.com/v1/gifs/trending?api_key=${encodeURIComponent(GIPHY_API_KEY)}&limit=24&rating=pg`;
+          ? `https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(GIPHY_API_KEY)}&q=${encodeURIComponent(normalizedSearch)}&limit=${GIF_FETCH_LIMIT}&rating=pg`
+          : `https://api.giphy.com/v1/gifs/trending?api_key=${encodeURIComponent(GIPHY_API_KEY)}&limit=${GIF_FETCH_LIMIT}&rating=pg`;
         const response = await fetch(endpoint);
-        const json = await response.json() as { data?: Array<{ id: string; images?: { fixed_width?: { url?: string }; fixed_width_still?: { url?: string } } }> };
+        const json = await response.json() as { data?: Array<{ id: string; images?: { fixed_width?: { url?: string }; fixed_width_still?: { url?: string }; fixed_width_small_still?: { url?: string } } }> };
         if (isCancelled) return;
 
         const nextItems: GiphyGif[] = (json.data || [])
           .map((item) => ({
             id: item.id,
             url: item.images?.fixed_width?.url || "",
-            previewUrl: item.images?.fixed_width_still?.url || item.images?.fixed_width?.url || ""
+            previewUrl: item.images?.fixed_width_small_still?.url || item.images?.fixed_width_still?.url || item.images?.fixed_width?.url || ""
           }))
           .filter((item) => item.url && item.previewUrl);
 
@@ -389,7 +367,7 @@ export const Toolbar = ({
           setGifLoading(false);
         }
       }
-    }, 250);
+    }, 350);
 
     return () => {
       isCancelled = true;
@@ -439,7 +417,7 @@ export const Toolbar = ({
         title="GIF"
         onClick={openGifPicker}
         toolType="gif"
-        toolPayload={selectedGif || GIF_FALLBACK_URL}
+        toolPayload={selectedGif}
         disabled={isLayerLocked}
       >
         <GifBoxOutlinedIcon fontSize="small" />
@@ -496,6 +474,7 @@ export const Toolbar = ({
           {EMOJI_PRESETS.map((emoji) => (
             <EmojiPickButton
               key={emoji}
+              aria-label={`Select emoji ${emoji}`}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData("application/react-whiteboard-tool", "emoji");
@@ -528,6 +507,7 @@ export const Toolbar = ({
           {STICKER_PRESETS.map((preset) => (
             <StickerPickButton
               key={`${preset.symbol}-${preset.fill}`}
+              aria-label={`Select sticker ${preset.symbol}`}
               $fill={preset.fill}
               $stroke={preset.stroke}
               draggable
@@ -572,6 +552,7 @@ export const Toolbar = ({
           {gifItems.map((gif) => (
             <GifPickButton
               key={gif.id}
+              aria-label="Select GIF"
               onClick={() => {
                 setSelectedGif(gif.url);
                 onGif(gif.url);
@@ -587,7 +568,7 @@ export const Toolbar = ({
               draggable
               type="button"
             >
-              <GifThumb src={gif.previewUrl} alt="gif" />
+              <GifThumb src={gif.previewUrl} alt="GIF preview" />
             </GifPickButton>
           ))}
         </GifGrid>

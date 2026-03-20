@@ -7,7 +7,7 @@ import {
   IconButton,
   Box
 } from "@mui/material";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { Input } from "../../../../components/ui/Input";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
@@ -93,6 +93,13 @@ const StyledSendButton = styled(IconButton)({
   }
 });
 
+let offlineCommentCounter = 0;
+
+const nextOfflineCommentId = () => {
+  offlineCommentCounter += 1;
+  return `temp-comment-${offlineCommentCounter}`;
+};
+
 export const CommentPanel = () => {
   const dispatch = useDispatch();
   const isOpen = useSelector(selectIsCommentPanelOpen);
@@ -101,10 +108,10 @@ export const CommentPanel = () => {
   const elements = useSelector((state: RootState) => state.canvas.elements);
   const user = useSelector((state: RootState) => state.auth.user);
 
-  const { control, handleSubmit, reset, watch } = useForm({
+  const { control, handleSubmit, reset } = useForm({
     defaultValues: { commentText: "" }
   });
-  const commentText = watch("commentText");
+  const commentText = useWatch({ control, name: "commentText" }) ?? "";
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -150,7 +157,7 @@ export const CommentPanel = () => {
     if (navigator.onLine) {
       await createComment({ elementId: activeStickyNoteId, content: trimmed });
     } else {
-      const tempId = `temp-${Date.now()}`;
+      const tempId = nextOfflineCommentId();
       const fakeComment: CommentPopulated = {
         id: tempId,
         boardId: elements[activeStickyNoteId]?.boardId || "",
@@ -211,7 +218,7 @@ export const CommentPanel = () => {
           <HeaderTitle variant="h6">Comments</HeaderTitle>
           <HeaderSubtitle>{getStickySubtitle()}</HeaderSubtitle>
         </Box>
-        <IconButton onClick={handleClose} size="small">
+        <IconButton onClick={handleClose} size="small" aria-label="Close comments panel">
           <CloseIcon htmlColor="rgba(255,255,255,0.7)" />
         </IconButton>
       </PanelHeader>
@@ -251,6 +258,7 @@ export const CommentPanel = () => {
           type="submit"
           disabled={!commentText.trim()}
           size="small"
+          aria-label="Send comment"
         >
           <SendIcon />
         </StyledSendButton>

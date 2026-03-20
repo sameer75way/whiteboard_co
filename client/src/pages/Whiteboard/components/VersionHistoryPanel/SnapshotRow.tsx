@@ -134,6 +134,7 @@ export const SnapshotRow = ({
             size="small"
             onClick={() => onPreview(snapshot.id)}
             title="Preview"
+            aria-label="Preview snapshot"
           >
             <VisibilityIcon fontSize="small" htmlColor="rgba(255,255,255,0.6)" />
           </IconButton>
@@ -141,6 +142,7 @@ export const SnapshotRow = ({
             size="small"
             onClick={() => setConfirmOpen(true)}
             title="Restore"
+            aria-label="Restore snapshot"
           >
             <RestoreIcon fontSize="small" htmlColor="rgba(255,255,255,0.6)" />
           </IconButton>

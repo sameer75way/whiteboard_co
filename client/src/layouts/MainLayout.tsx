@@ -15,7 +15,7 @@ const RootRoot = styled(Box)({
   minHeight: '100vh',
 });
 
-const MainContent = styled(Box, {
+const MainContent = styled('main', {
   shouldForwardProp: (prop) => prop !== 'isBoard'
 })<{ isBoard?: boolean }>(({ theme, isBoard }) => ({
   flexGrow: 1,
