@@ -238,8 +238,8 @@ export const AccessManagerModal = ({ open, onClose, boardId, members, isOwner, o
 
   const renderMembers = () => {
     return members.filter(m => m.status === 'Accepted').map((member) => (
-      <StyledListItem 
-        key={member._id}
+      <StyledListItem   
+      key={member._id}
         secondaryAction={
           member.role !== 'Owner' && isOwner && member.user._id !== currentUser?.id ? (
             <FlexBox>
